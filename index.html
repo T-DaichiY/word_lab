@@ -1,3 +1,10 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<!-- CSP is set via real HTTP headers in firebase.json (Firebase Hosting), not this meta tag. -->
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Word Lab</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
@@ -241,6 +248,9 @@ input.typed:focus{border-color:var(--accent);outline:none}
 .badge-pts{flex:none;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;
   padding:.4rem .65rem;background:var(--accent-soft);border:1.5px solid var(--accent);color:var(--accent);
   border-radius:8px;font-variant-numeric:tabular-nums}
+.langtoggle{flex:none;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:12.5px;
+  padding:.4rem .7rem;background:var(--gloss-soft);border:1.5px solid var(--gloss);color:var(--gloss);
+  border-radius:8px;white-space:nowrap}
 #ptoast{position:fixed;left:50%;top:18%;z-index:80;transform:translate(-50%,-6px);opacity:0;
   font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.4rem;color:var(--accent);
   background:var(--surface);border:1.5px solid var(--accent);border-radius:100px;padding:.4rem 1rem;
@@ -267,23 +277,97 @@ input.typed:focus{border-color:var(--accent);outline:none}
   border:1.5px solid var(--gloss)}
 .ptsbar{height:8px;border-radius:5px;background:var(--sunk);border:1.5px solid var(--edge);overflow:hidden;margin:.5rem 0 .3rem}
 .ptsbar i{display:block;height:100%;background:var(--accent);border-radius:5px 0 0 5px}
+
+/* ---------- sign-in ---------- */
+.gsignin{display:inline-flex;align-items:center;gap:.6rem;font-family:'Bricolage Grotesque',sans-serif;
+  font-weight:700;font-size:1rem;padding:.9rem 1.4rem;background:#fff;color:#1f1f1f;border:1.5px solid #dadce0;
+  border-bottom-width:4px;border-radius:var(--r)}
+.gsignin:active{transform:translateY(2px);border-bottom-width:2px}
+.domain-note{display:flex;gap:.6rem;align-items:flex-start;padding:.85rem 1rem;background:var(--sunk);
+  border:1.5px solid var(--edge);border-radius:var(--r);font-size:13px;color:var(--ink2);margin-top:1rem}
+.authmsg{padding:.8rem 1rem;border-radius:var(--r);font-size:14px;font-weight:600;margin-bottom:1rem;display:none}
+.authmsg.show{display:block}
+.authmsg.err{background:var(--bad-soft,#3a2220);color:var(--gloss);border:1.5px solid var(--gloss)}
+.spinner{width:34px;height:34px;border-radius:50%;border:3px solid var(--edge);border-top-color:var(--accent);
+  animation:spin .8s linear infinite;margin:2rem auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spinner{animation:none}}
 </style>
+</head>
+<body>
+
+<!-- Firebase (Auth + Firestore) — bridges to the classic script below via window.WordLabFB -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import {
+    getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
+  } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+  import {
+    initializeFirestore, persistentLocalCache, doc, getDoc, setDoc,
+    collection, getDocs, serverTimestamp
+  } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBSAgXCXPSrcozO1-S7IyJmUGBMJAOnnco",
+    authDomain: "word-lab-g8-2627.firebaseapp.com",
+    projectId: "word-lab-g8-2627",
+    storageBucket: "word-lab-g8-2627.firebasestorage.app",
+    messagingSenderId: "605628334786",
+    appId: "1:605628334786:web:f5b33d9fee91a19839315b"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = initializeFirestore(app, { localCache: persistentLocalCache() });
+  const SCHOOL_DOMAIN = 'sisbschool.com';
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ hd: SCHOOL_DOMAIN });
+
+  window.WordLabFB = {
+    signIn: async () => {
+      try { await signInWithPopup(auth, provider); }
+      catch (e) { if (e.code !== 'auth/popup-closed-by-user') alert('Sign-in failed: ' + e.message); }
+    },
+    signOut: async () => { await signOut(auth); },
+    loadStudent: async (uid) => {
+      const snap = await getDoc(doc(db, 'students', uid));
+      return snap.exists() ? snap.data() : null;
+    },
+    saveStudent: async (uid, data) => {
+      await setDoc(doc(db, 'students', uid), { ...data, updatedAt: serverTimestamp() });
+    },
+    listStudents: async () => {
+      const snap = await getDocs(collection(db, 'students'));
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    },
+  };
+
+  onAuthStateChanged(auth, (user) => {
+    if (!user) { window.onWordLabAuth(null); return; }
+    if (!user.email || !user.email.toLowerCase().endsWith('@' + SCHOOL_DOMAIN) || !user.emailVerified) {
+      window.onWordLabAuth('wrong-domain');
+      signOut(auth);
+      return;
+    }
+    window.onWordLabAuth({ uid: user.uid, email: user.email, name: user.displayName || user.email.split('@')[0] });
+  });
+</script>
 
 <div id="bar">
   <div class="bar-in">
     <button class="bar-back key" id="back" hidden>←</button>
     <div class="bar-t">
       <div class="bar-lv" id="barlv">Word Lab</div>
-      <div class="bar-name" id="barname">English first · 英语优先</div>
+      <div class="bar-name" id="barname">English first</div>
     </div>
     <button class="badge-pts" id="ptsbadge" hidden></button>
+    <button class="langtoggle" id="langtoggle" type="button"></button>
     <button class="mini" id="repeat" style="flex:none;width:52px;height:44px;font-size:19px" hidden>🔊</button>
   </div>
   <div class="rail" id="rail" hidden></div>
 </div>
 
 <main>
-  <section class="view" id="v-profile"></section>
   <section class="view" id="v-home"></section>
   <section class="view" id="v-task"></section>
   <section class="view" id="v-teacher"></section>
@@ -297,125 +381,124 @@ input.typed:focus{border-color:var(--accent);outline:none}
 /* pic: e = emoji · d = drawn demo · t = text tile */
 const W = {
   /* L1 — app words */
-  listen:{zh:'听', e:'👂'},
-  type:{zh:'打字', e:'⌨️'},
-  choose:{zh:'选择', d:'choose'},
-  again:{zh:'再一次', e:'🔁'},
-  next:{zh:'下一个', e:'⏭️'},
-  right:{zh:'对', e:'✅'},
-  wrong:{zh:'错', e:'❌'},
-  it:{zh:'它', glue:1}, is:{zh:'是', glue:1}, and:{zh:'和', glue:1},
+  listen:{zh:'听', th:'ฟัง', e:'👂'},
+  type:{zh:'打字', th:'พิมพ์', e:'⌨️'},
+  choose:{zh:'选择', th:'เลือก', d:'choose'},
+  again:{zh:'再一次', th:'อีกครั้ง', e:'🔁'},
+  next:{zh:'下一个', th:'ถัดไป', e:'⏭️'},
+  right:{zh:'对', th:'ถูกต้อง', e:'✅'},
+  wrong:{zh:'错', th:'ผิด', e:'❌'},
+  it:{zh:'它', th:'มัน', glue:1}, is:{zh:'是', th:'คือ', glue:1}, and:{zh:'和', th:'และ', glue:1},
   /* L2 — things on a screen */
-  word:{zh:'单词', d:'word'},
-  picture:{zh:'图片', e:'🖼️'},
-  name:{zh:'名字', e:'🏷️'},
-  phone:{zh:'手机', e:'📱'},
-  screen:{zh:'屏幕', e:'🖥️'},
-  computer:{zh:'电脑', e:'💻'},
-  a:{zh:'一个', glue:1}, the:{zh:'那个', glue:1}, this:{zh:'这个', glue:1},
+  word:{zh:'单词', th:'คำ', d:'word'},
+  picture:{zh:'图片', th:'รูปภาพ', e:'🖼️'},
+  name:{zh:'名字', th:'ชื่อ', e:'🏷️'},
+  phone:{zh:'手机', th:'โทรศัพท์', e:'📱'},
+  screen:{zh:'屏幕', th:'หน้าจอ', e:'🖥️'},
+  computer:{zh:'电脑', th:'คอมพิวเตอร์', e:'💻'},
+  a:{zh:'一个', th:'หนึ่ง', glue:1}, the:{zh:'那个', th:'นั้น', glue:1}, this:{zh:'这个', th:'นี้', glue:1},
   /* L3 — is / is not */
-  not:{zh:'不是', d:'not'},
-  yes:{zh:'是的', e:'👍'},
-  no:{zh:'不', e:'👎'},
-  same:{zh:'一样', d:'same'},
-  different:{zh:'不一样', d:'diff'},
-  robot:{zh:'机器人', e:'🤖'},
+  not:{zh:'不是', th:'ไม่ใช่', d:'not'},
+  yes:{zh:'是的', th:'ใช่', e:'👍'},
+  no:{zh:'不', th:'ไม่', e:'👎'},
+  same:{zh:'一样', th:'เหมือนกัน', d:'same'},
+  different:{zh:'不一样', th:'ต่างกัน', d:'diff'},
+  robot:{zh:'机器人', th:'หุ่นยนต์', e:'🤖'},
   /* L4 — people do things */
-  I:{zh:'我', e:'🙋'},
-  you:{zh:'你', e:'👉'},
-  person:{zh:'人', e:'🧑'},
-  make:{zh:'做', e:'🔨'},
-  use:{zh:'用', d:'use'},
-  help:{zh:'帮助', e:'🤝'},
+  I:{zh:'我', th:'ฉัน', e:'🙋'},
+  you:{zh:'你', th:'คุณ', e:'👉'},
+  person:{zh:'人', th:'คน', e:'🧑'},
+  make:{zh:'做', th:'ทำ', e:'🔨'},
+  use:{zh:'用', th:'ใช้', d:'use'},
+  help:{zh:'帮助', th:'ช่วยเหลือ', e:'🤝'},
   /* L5 — AI is software */
-  AI:{zh:'人工智能', d:'ai'},
-  software:{zh:'软件', d:'soft'},
-  new:{zh:'新的', e:'✨'},
-  ask:{zh:'问', d:'ask'},
-  work:{zh:'工作', e:'⚙️'},
-  can:{zh:'能', glue:1},
+  AI:{zh:'人工智能', th:'ปัญญาประดิษฐ์', d:'ai'},
+  software:{zh:'软件', th:'ซอฟต์แวร์', d:'soft'},
+  new:{zh:'新的', th:'ใหม่', e:'✨'},
+  ask:{zh:'问', th:'ถาม', d:'ask'},
+  work:{zh:'工作', th:'ทำงาน', e:'⚙️'},
+  can:{zh:'能', th:'สามารถ', glue:1},
   /* L6 — many examples */
-  many:{zh:'很多', d:'many'},
-  example:{zh:'例子', d:'example'},
-  learn:{zh:'学习', d:'learn'},
-  look:{zh:'看', e:'👀'},
-  thing:{zh:'东西', e:'📦'},
-  from:{zh:'从', glue:1}, at:{zh:'在', glue:1},
+  many:{zh:'很多', th:'เยอะ', d:'many'},
+  example:{zh:'例子', th:'ตัวอย่าง', d:'example'},
+  learn:{zh:'学习', th:'เรียนรู้', d:'learn'},
+  look:{zh:'看', th:'ดู', e:'👀'},
+  thing:{zh:'东西', th:'สิ่งของ', e:'📦'},
+  from:{zh:'从', th:'จาก', glue:1}, at:{zh:'在', th:'ที่', glue:1},
   /* L7 — rules or examples */
-  rule:{zh:'规则', e:'📋'},
-  write:{zh:'写', e:'✍️'},
-  program:{zh:'程序', d:'program'},
-  tell:{zh:'告诉', e:'🗣️'},
-  old:{zh:'旧的', e:'🕰️'},
+  rule:{zh:'规则', th:'กฎ', e:'📋'},
+  write:{zh:'写', th:'เขียน', e:'✍️'},
+  program:{zh:'程序', th:'โปรแกรม', d:'program'},
+  tell:{zh:'告诉', th:'บอก', e:'🗣️'},
+  old:{zh:'旧的', th:'เก่า', e:'🕰️'},
   /* L8 — the next word */
-  guess:{zh:'猜', d:'guess'},
-  sentence:{zh:'句子', d:'sentence'},
-  sure:{zh:'确定', e:'💯'},
-  sometimes:{zh:'有时候', d:'sometimes'},
-  maybe:{zh:'也许', e:'🤔'},
+  guess:{zh:'猜', th:'เดา', d:'guess'},
+  sentence:{zh:'句子', th:'ประโยค', d:'sentence'},
+  sure:{zh:'确定', th:'แน่ใจ', e:'💯'},
+  sometimes:{zh:'有时候', th:'บางครั้ง', d:'sometimes'},
+  maybe:{zh:'也许', th:'บางที', e:'🤔'},
   /* L9 — I ask, or it works alone */
-  chatbot:{zh:'聊天机器人', e:'💬'},
-  photo:{zh:'照片', e:'📷'},
-  email:{zh:'电子邮件', e:'📧'},
-  face:{zh:'脸', e:'🙂'},
-  movie:{zh:'电影', e:'🎬'},
-  your:{zh:'你的', glue:1},
+  chatbot:{zh:'聊天机器人', th:'แชทบอท', e:'💬'},
+  photo:{zh:'照片', th:'รูปถ่าย', e:'📷'},
+  email:{zh:'电子邮件', th:'อีเมล', e:'📧'},
+  face:{zh:'脸', th:'ใบหน้า', e:'🙂'},
+  movie:{zh:'电影', th:'ภาพยนตร์', e:'🎬'},
+  your:{zh:'你的', th:'ของคุณ', glue:1},
 };
 
 const LEVELS = [
-  {n:1, title:'Words for this app', zh:'这个应用的词',
+  {n:1, title:'Words for this app', zh:'这个应用的词', th:'คำศัพท์สำหรับแอปนี้',
    words:['listen','type','choose','again','next','right','wrong'],
    glue:['it','is','and'], chunks:[],
    sentences:['Listen and choose.','Type it again.','It is right.','It is wrong.']},
 
-  {n:2, title:'Things on a screen', zh:'屏幕上的东西',
+  {n:2, title:'Things on a screen', zh:'屏幕上的东西', th:'สิ่งของบนหน้าจอ',
    words:['word','picture','name','phone','screen','computer'],
    glue:['a','the','this'], chunks:[],
    sentences:['This is a phone.','This is a computer.','Choose the picture.','Type the word.']},
 
-  {n:3, title:'Is / is not', zh:'是 / 不是',
+  {n:3, title:'Is / is not', zh:'是 / 不是', th:'ใช่ / ไม่ใช่',
    words:['not','yes','no','same','different','robot'],
    glue:[], chunks:[],
    sentences:['This is a robot.','A robot is not a phone.','This is not the same.','It is different.']},
 
-  {n:4, title:'People do things', zh:'人做事情',
+  {n:4, title:'People do things', zh:'人做事情', th:'คนทำสิ่งต่างๆ',
    words:['I','you','person','make','use','help'],
    glue:[], chunks:[],
    sentences:['I use a computer.','I make a picture.','You use a phone.','I help you.']},
 
-  {n:5, title:'AI is software', zh:'AI 是软件',
+  {n:5, title:'AI is software', zh:'AI 是软件', th:'เอไอคือซอฟต์แวร์',
    words:['AI','software','new','ask','work'],
    glue:['can'], chunks:[],
-   labels:[['Generative AI','生成式人工智能']],
+   labels:[['Generative AI','生成式人工智能','เจนเนอเรทีฟเอไอ (ปัญญาประดิษฐ์เชิงสร้างสรรค์)']],
    sentences:['AI is software.','AI is not a robot.','AI can make a new picture.','You can ask AI.']},
 
-  {n:6, title:'Many examples', zh:'很多例子',
+  {n:6, title:'Many examples', zh:'很多例子', th:'ตัวอย่างมากมาย',
    words:['many','example','learn','look','thing'],
    glue:['from','at'], chunks:[],
-   note:{en:'One more thing: many words + s', zh:'还有一件事：很多单词后面加 s', ex:['example → examples','learn → learns','picture → pictures']},
-   labels:[['Machine Learning','机器学习'],['Training Data','训练数据']],
+   note:{en:'One more thing: many words + s', zh:'还有一件事：很多单词后面加 s', th:'อีกอย่างหนึ่ง: คำหลายคำเติม s', ex:['example → examples','learn → learns','picture → pictures']},
+   labels:[['Machine Learning','机器学习','การเรียนรู้ของเครื่อง (แมชชีนเลิร์นนิง)'],['Training Data','训练数据','ข้อมูลฝึกสอน']],
    sentences:['I learn from examples.','The computer learns from many examples.','This is a new example.','Look at many pictures.']},
 
-  {n:7, title:'Rules or examples', zh:'规则还是例子',
+  {n:7, title:'Rules or examples', zh:'规则还是例子', th:'กฎ หรือ ตัวอย่าง',
    words:['rule','write','program','tell','old'],
    glue:[], chunks:['does not'],
-   labels:[['Algorithm','算法']],
+   labels:[['Algorithm','算法','อัลกอริทึม']],
    sentences:['A person writes the rules.','The computer uses the rules.','AI does not use rules.','AI learns from many examples.']},
 
-  {n:8, title:'The next word', zh:'下一个单词',
+  {n:8, title:'The next word', zh:'下一个单词', th:'คำถัดไป',
    words:['guess','sentence','sure','sometimes','maybe'],
    glue:[], chunks:[],
-   labels:[['Hallucination','人工智能幻觉']],
+   labels:[['Hallucination','人工智能幻觉','อาการหลอนของเอไอ (ข้อมูลที่เอไอสร้างขึ้นเองอย่างผิดๆ)']],
    sentences:['AI guesses the next word.','AI makes a sentence.','Sometimes the guess is wrong.','Maybe the next word is wrong.']},
 
-  {n:9, title:'I ask, or it works alone', zh:'我问，或者它自己работ',
+  {n:9, title:'I ask, or it works alone', zh:'我问，或者它自己工作', th:'ฉันถาม หรือมันทำงานเอง',
    words:['chatbot','photo','email','face','movie'],
    glue:['your'], chunks:['do not'],
-   labels:[['On-Purpose AI','主动使用的人工智能'],['Background AI','后台人工智能']],
+   labels:[['On-Purpose AI','主动使用的人工智能','เอไอที่ใช้โดยตั้งใจ'],['Background AI','后台人工智能','เอไอที่ทำงานเบื้องหลัง']],
    sentences:['I ask the chatbot.','I choose this chatbot.','I do not ask this AI.','AI looks at your photos.','AI looks at your face.']},
 ];
 /* ==== DATA END ==== */
-LEVELS[8].zh = '我问，或者它自己работ'.replace('работ','工作');
 
 /* ---------------- drawn pictures ---------------- */
 const DEMOS = {
@@ -449,30 +532,58 @@ const store={
   get(k,d){try{const v=localStorage.getItem('wl_'+k);return v===null?d:JSON.parse(v);}catch(e){return d;}},
   set(k,v){try{localStorage.setItem('wl_'+k,JSON.stringify(v));}catch(e){}}
 };
-/* ---------------- profiles (on-device only — no cloud, no accounts) ---------------- */
-function blankProfile(name){
-  return {name, done:[], stats:{}, sents:[], first:{r:0,t:0}, points:0, seenWords:{}};
+
+/* ---------------- bilingual toggle: Chinese ⇄ Thai (a per-device preference, not student data) ---------------- */
+let LANG = store.get('lang','zh');
+function pick(zh,th){ return LANG==='th' ? (th||zh) : zh; }
+function gl(o){ return o ? pick(o.zh, o.th) : ''; }
+function barTagline(){ return 'English first · '+pick('英语优先','ภาษาอังกฤษก่อน'); }
+function renderLangToggle(){
+  const btn = $('#langtoggle');
+  btn.textContent = LANG==='th' ? '🇹🇭 ไทย' : '🇨🇳 中文';
+  btn.title = LANG==='th' ? 'Switch to Chinese' : 'Switch to Thai';
 }
-let PROFILES = store.get('profiles', {});
-let activeId = store.get('active', null);
-if(activeId && !PROFILES[activeId]) activeId = null;
-let P = activeId ? PROFILES[activeId] : blankProfile('');
-if(!P.stats) P.stats={};
-if(typeof P.points!=='number') P.points=0;
-if(!P.seenWords) P.seenWords={};
+$('#langtoggle').addEventListener('click',()=>{
+  LANG = LANG==='th' ? 'zh' : 'th';
+  store.set('lang', LANG);
+  renderLangToggle();
+  if(view==='home'){ renderHome(); setBar('Word Lab', barTagline()); }
+  else if(view==='teacher') renderTeacher();
+  else if(view==='task') renderItem();
+});
+renderLangToggle();
+
+/* ---------------- identity (Firebase Auth + Firestore — cross-device) ---------------- */
+const TEACHER_EMAIL = 'daichi.yamamoto@sisbschool.com';
+function blankProfile(name, email){
+  return {name, email, done:[], stats:{}, sents:[], first:{r:0,t:0}, points:0, seenWords:{}};
+}
+let uid=null, userEmail=null, isTeacher=false;
+let P = blankProfile('','');
+let saveTimer=null, dirty=false;
 function save(){
-  if(activeId){ PROFILES[activeId]=P; store.set('profiles',PROFILES); store.set('active',activeId); }
+  dirty=true;
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(flushSave, 1500);
 }
+function flushSave(){
+  clearTimeout(saveTimer);
+  if(!dirty || !uid) return;
+  dirty=false;
+  window.WordLabFB.saveStudent(uid, P).catch(e=>console.error('save failed', e));
+}
+window.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') flushSave(); });
+window.addEventListener('beforeunload', flushSave);
 function stat(w){ return P.stats[w] || (P.stats[w]={seen:0,ok:0,bad:0,zh:0}); }
 
 /* ---------------- points + rank ---------------- */
 const RANKS = [
-  {min:0,    en:'New Recruit',   zh:'新学员'},
-  {min:150,  en:'Trainee',       zh:'学徒'},
-  {min:400,  en:'Operator',      zh:'操作员'},
-  {min:800,  en:'Analyst',       zh:'分析员'},
-  {min:1300, en:'Specialist',    zh:'专家'},
-  {min:2000, en:'Lab Expert',    zh:'实验室专家'},
+  {min:0,    en:'New Recruit',   zh:'新学员',     th:'นักเรียนใหม่'},
+  {min:150,  en:'Trainee',       zh:'学徒',       th:'ผู้ฝึกงาน'},
+  {min:400,  en:'Operator',      zh:'操作员',     th:'ผู้ควบคุม'},
+  {min:800,  en:'Analyst',       zh:'分析员',     th:'นักวิเคราะห์'},
+  {min:1300, en:'Specialist',    zh:'专家',       th:'ผู้เชี่ยวชาญ'},
+  {min:2000, en:'Lab Expert',    zh:'实验室专家', th:'ผู้เชี่ยวชาญห้องแล็บ'},
 ];
 function rankFor(pts){ let r=RANKS[0]; for(const x of RANKS){ if(pts>=x.min) r=x; } return r; }
 function nextRank(pts){ return RANKS.find(x=>x.min>pts) || null; }
@@ -550,81 +661,105 @@ function pictured(n){ /* testable words up to level n */
 let view='home';
 function show(v){
   view=v;
-  ['profile','home','task','teacher'].forEach(k=>$('#v-'+k).classList.toggle('on',k===v));
-  $('#back').hidden = (v==='home' || v==='profile');
+  ['home','task','teacher'].forEach(k=>$('#v-'+k).classList.toggle('on',k===v));
+  $('#back').hidden = (v==='home');
   $('#rail').hidden = (v!=='task');
   $('#repeat').hidden = (v!=='task');
-  $('#ptsbadge').hidden = (v==='profile' || !activeId);
+  $('#ptsbadge').hidden = (!uid || isTeacher);
   updatePtsBadge();
   window.scrollTo(0,0);
 }
-function updatePtsBadge(){ if(activeId) $('#ptsbadge').textContent = '★ '+(P.points||0); }
-$('#back').addEventListener('click',()=>{ stopAudio(); renderHome(); show('home'); setBar('Word Lab','English first · 英语优先'); });
-$('#ptsbadge').addEventListener('click',()=>{ renderHome(); show('home'); setBar('Word Lab','English first · 英语优先'); });
+function updatePtsBadge(){ if(uid) $('#ptsbadge').textContent = '★ '+(P.points||0); }
+$('#back').addEventListener('click',()=>{ stopAudio(); renderHome(); show('home'); setBar('Word Lab',barTagline()); });
+$('#ptsbadge').addEventListener('click',()=>{ renderHome(); show('home'); setBar('Word Lab',barTagline()); });
 function setBar(a,b){ $('#barlv').textContent=a; $('#barname').textContent=b; }
 
-/* ---------- PROFILE PICKER ---------- */
-function slugify(s){ return s.toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') || 'student'; }
-function switchTo(id){
-  activeId=id; P=PROFILES[id];
-  if(!P.stats) P.stats={}; if(typeof P.points!=='number') P.points=0; if(!P.seenWords) P.seenWords={};
-  store.set('active',id); save();
-  renderHome(); show('home'); setBar('Word Lab','English first · 英语优先');
-}
-function renderProfilePicker(){
-  const ids=Object.keys(PROFILES);
-  $('#v-profile').innerHTML = `
-    <div class="hero">
-      <div class="eyebrow">Word Lab</div>
-      <h1>Who is learning?</h1>
-      <p>Tap your name. New here? Add your name below.</p>
-      <div class="zh">谁在学习？点你的名字。第一次来？在下面加你的名字</div>
-    </div>
-    <div class="plist" id="plist">
-      ${ids.map(id=>{
-        const pr=PROFILES[id], rk=rankFor(pr.points||0);
-        return `<button class="key prow" data-id="${id}">
-          <span class="pav">${(pr.name||'?')[0].toUpperCase()}</span>
-          <span class="pinfo"><b>${pr.name}</b><span>${rk.en} · ★ ${pr.points||0}</span></span>
-        </button>`;
-      }).join('') || `<p class="muted">No names yet — add the first one below.</p>`}
-    </div>
-    <div class="newp">
-      <input id="pname" placeholder="Type your name" maxlength="24">
-      <button class="key btn go" id="padd" style="flex:none;padding:.9rem 1.1rem">Add</button>
-    </div>`;
-  $('#plist').querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>switchTo(b.dataset.id));
-  function addProfile(){
-    const name=$('#pname').value.trim(); if(!name) return;
-    let id=slugify(name), n=1; while(PROFILES[id] && PROFILES[id].name.toLowerCase()!==name.toLowerCase()){ id=slugify(name)+'-'+(++n); }
-    if(!PROFILES[id]) PROFILES[id]=blankProfile(name);
-    store.set('profiles',PROFILES);
-    switchTo(id);
+/* ---------- SIGN IN (Google, restricted to the school domain) ---------- */
+/* ---------- auth state → app state ---------- */
+let authLoading=false, authError=null, authChecked=false;
+window.onWordLabAuth = async function(authState){
+  authChecked=true;
+  if(authState===null){
+    uid=null; userEmail=null; isTeacher=false; authError=null; authLoading=false;
+    renderHome(); show('home'); setBar('Word Lab','Sign in to learn');
+    return;
   }
-  $('#padd').onclick=addProfile;
-  $('#pname').addEventListener('keydown',e=>{ if(e.key==='Enter') addProfile(); });
+  if(authState==='wrong-domain'){
+    uid=null; authError='wrong-domain'; authLoading=false;
+    renderHome(); show('home'); setBar('Word Lab','Sign in to learn');
+    return;
+  }
+  uid=authState.uid; userEmail=authState.email;
+  isTeacher = (userEmail.toLowerCase()===TEACHER_EMAIL);
+  if(isTeacher){
+    show('teacher'); setBar('Report','For the teacher');
+    renderTeacher();
+    return;
+  }
+  authLoading=true; authError=null;
+  renderHome(); show('home'); setBar('Word Lab','Loading your progress…');
+  try{
+    let data = await window.WordLabFB.loadStudent(uid);
+    if(!data){ data = blankProfile(authState.name, userEmail); await window.WordLabFB.saveStudent(uid, data); }
+    P = data;
+    if(!P.stats) P.stats={}; if(typeof P.points!=='number') P.points=0; if(!P.seenWords) P.seenWords={};
+    if(!P.done) P.done=[]; if(!P.sents) P.sents=[]; if(!P.first) P.first={r:0,t:0};
+    authLoading=false;
+  }catch(e){
+    console.error('load failed', e);
+    authLoading=false; authError='load-failed';
+    renderHome(); show('home'); setBar('Word Lab','Sign in to learn');
+    return;
+  }
+  renderHome(); show('home'); setBar('Word Lab',barTagline());
+};
+
+/* ---------- HOME (the sign-in button lives at the top of this page, not on a separate screen) ---------- */
+const GOOGLE_G = `<svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>`;
+
+function identityBlockHTML(){
+  const signedIn = !!uid && !isTeacher;
+  if(signedIn){
+    const rk = rankFor(P.points||0), nx = nextRank(P.points||0);
+    const span = nx ? (nx.min-rk.min) : 1;
+    const into = nx ? Math.min(100, Math.round(100*((P.points||0)-rk.min)/span)) : 100;
+    return `
+      <div class="rankline"><span class="rk">${rk.en} · ${gl(rk)}</span>
+        <button class="linkish" id="switchp" style="margin-left:auto;padding:0;font-size:12.5px">Not ${P.name}? Sign out →</button></div>
+      <div style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.6rem">★ ${P.points||0} <span style="font-size:12px;color:var(--ink3);font-weight:500">points</span></div>
+      <div class="ptsbar"><i style="width:${into}%"></i></div>
+      <div style="font-size:11.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace">${nx ? (nx.min-(P.points||0))+' to '+nx.en : 'Top rank reached'}</div>`;
+  }
+  if(!authChecked){
+    return `<div style="display:flex;align-items:center;gap:.7rem"><div class="spinner" style="margin:0;width:24px;height:24px"></div><span>Checking sign-in…</span></div>`;
+  }
+  if(authLoading){
+    return `<div style="display:flex;align-items:center;gap:.7rem"><div class="spinner" style="margin:0;width:24px;height:24px"></div><span>Loading your progress…</span></div>`;
+  }
+  const errHTML = authError==='wrong-domain'
+    ? `<div class="authmsg err show" style="margin-bottom:.8rem">That account isn't a @sisbschool.com school account.
+        <div style="color:var(--gloss);font-weight:600;margin-top:.3rem">${pick('请使用你的学校 Google 账号（@sisbschool.com）','กรุณาใช้บัญชี Google ของโรงเรียน (@sisbschool.com)')}</div></div>`
+    : authError==='load-failed'
+    ? `<div class="authmsg err show" style="margin-bottom:.8rem">Couldn't load your progress — check your internet connection and try again.</div>`
+    : '';
+  return `${errHTML}
+    <button class="key gsignin" id="gsignin">${GOOGLE_G} Sign in with Google</button>
+    <div style="font-size:11.5px;color:var(--ink3);margin-top:.6rem">🔒 @sisbschool.com school accounts only · ${pick('只能用学校 Google 账号登录','เข้าสู่ระบบด้วยบัญชี Google ของโรงเรียนเท่านั้น')}</div>`;
 }
 
-/* ---------- HOME ---------- */
 function renderHome(){
-  const nextN = LEVELS.find(l=>!P.done.includes(l.n))?.n || LEVELS.length;
-  const learned = Object.keys(P.stats).filter(w=>P.stats[w].ok>0).length;
-  const rk = rankFor(P.points||0), nx = nextRank(P.points||0);
-  const span = nx ? (nx.min-rk.min) : 1;
-  const into = nx ? Math.min(100, Math.round(100*((P.points||0)-rk.min)/span)) : 100;
+  const signedIn = !!uid && !isTeacher;
+  const nextN = signedIn ? (LEVELS.find(l=>!P.done.includes(l.n))?.n || LEVELS.length) : 0;
+  const learned = signedIn ? Object.keys(P.stats).filter(w=>P.stats[w].ok>0).length : 0;
   $('#v-home').innerHTML = `
     <div class="hero">
       <div class="eyebrow">Grade 8 · AI Unit</div>
       <h1>Word Lab</h1>
       <p>Learn the English words first. Then the AI words are easy.</p>
-      <div class="zh">先学英语单词。然后 AI 单词就简单了。</div>
+      <div class="zh">${pick('先学英语单词。然后 AI 单词就简单了。','เรียนคำศัพท์ภาษาอังกฤษก่อน แล้วคำ AI จะง่ายขึ้น')}</div>
     </div>
-    <div style="padding:1rem 1.1rem;margin-bottom:1.1rem;background:var(--surface);border:1.5px solid var(--edge);border-radius:var(--r)">
-      <div class="rankline"><span class="rk">${rk.en} · ${rk.zh}</span>
-        <button class="linkish" id="switchp" style="margin-left:auto;padding:0;font-size:12.5px">Not ${P.name}? Switch →</button></div>
-      <div style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.6rem">★ ${P.points||0} <span style="font-size:12px;color:var(--ink3);font-weight:500">points</span></div>
-      <div class="ptsbar"><i style="width:${into}%"></i></div>
-      <div style="font-size:11.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace">${nx ? (nx.min-(P.points||0))+' to '+nx.en : 'Top rank reached'}</div>
+    <div id="identity-block" style="padding:1rem 1.1rem;margin-bottom:1.1rem;background:var(--surface);border:1.5px solid var(--edge);border-radius:var(--r)">
+      ${identityBlockHTML()}
     </div>
     <div class="voice">
       <span>🔊</span><select id="vsel"></select>
@@ -633,7 +768,7 @@ function renderHome(){
     </div>
     <div class="ladder">
       ${LEVELS.map(l=>{
-        const done=P.done.includes(l.n), now=(l.n===nextN), open=done||now;
+        const done=signedIn && P.done.includes(l.n), now=signedIn && (l.n===nextN), open=done||now;
         return `<button class="key lv ${done?'done':''} ${now?'now':''}" data-lv="${l.n}" ${open?'':'disabled'}>
           <span class="lv-n">${done?'✓':l.n}</span>
           <span class="lv-t"><b>${l.title}</b><span>${l.words.slice(0,4).join(' · ')}…</span></span>
@@ -641,29 +776,28 @@ function renderHome(){
         </button>`;
       }).join('')}
     </div>
-    <div style="display:flex;align-items:center;gap:1rem">
+    ${signedIn?`<div style="display:flex;align-items:center;gap:1rem">
       <span class="muted" style="font-family:'JetBrains Mono',monospace;font-size:12px">
         ${P.done.length}/${LEVELS.length} levels · ${learned} words</span>
-      <button class="linkish" id="toteacher" style="margin-left:auto">For the teacher →</button>
-    </div>`;
+    </div>`:''}`;
   loadVoices();
   $('#vsel').onchange=e=>{ best=voices.find(v=>v.name===e.target.value)||best; store.set('voice',e.target.value); say('Hello. This is the new voice.'); };
   $('#vtest').onclick=()=>say('Listen and choose.');
-  $('#toteacher').onclick=()=>{ renderTeacher(); show('teacher'); setBar('Report','For the teacher'); };
-  $('#switchp').onclick=()=>{ renderProfilePicker(); show('profile'); setBar('Word Lab','Who is learning?'); };
+  $('#gsignin')?.addEventListener('click',()=>window.WordLabFB.signIn());
+  $('#switchp')?.addEventListener('click',()=>{ flushSave(); window.WordLabFB.signOut(); });
   $('#v-home').querySelectorAll('[data-lv]').forEach(b=>b.onclick=()=>startLevel(+b.dataset.lv));
 }
 
 /* ---------- LESSON ENGINE ---------- */
 let S = null;
 const STEP_ASK = [
-  ['Look and listen.','看和听'],
-  ['Listen. Choose the picture.','听。选择图片'],
-  ['Read. Choose the picture.','读。选择图片'],
-  ['Spell the word.','拼写单词'],
-  ['Make the sentence.','组成句子'],
-  ['Type the sentence.','打出句子'],
-  ['Old words.','复习旧单词'],
+  ['Look and listen.','看和听','ดูและฟัง'],
+  ['Listen. Choose the picture.','听。选择图片','ฟัง แล้วเลือกรูปภาพ'],
+  ['Read. Choose the picture.','读。选择图片','อ่าน แล้วเลือกรูปภาพ'],
+  ['Spell the word.','拼写单词','สะกดคำ'],
+  ['Make the sentence.','组成句子','แต่งประโยค'],
+  ['Type the sentence.','打出句子','พิมพ์ประโยค'],
+  ['Old words.','复习旧单词','คำศัพท์เก่า'],
 ];
 
 function startLevel(n){
@@ -700,10 +834,10 @@ function buildStep(){
 }
 
 function askHTML(){
-  const [en,zh]=STEP_ASK[S.step];
+  const [en,zh,th]=STEP_ASK[S.step];
   const n = S.queue.length>1 ? `<span class="n">${S.i+1}/${S.queue.length}</span>` : '';
   return `<div class="ask"><b>${en}</b>${n}</div>
-          <div style="color:var(--gloss);font-weight:600;margin:-.7rem 0 1rem;font-size:.92rem">${zh}</div>`;
+          <div style="color:var(--gloss);font-weight:600;margin:-.7rem 0 1rem;font-size:.92rem">${pick(zh,th)}</div>`;
 }
 function nextItem(){
   S.i++; S.tries=0; S.guided=false;
@@ -729,16 +863,16 @@ function finishLevel(){
     <div class="key done">
       <div class="tick">✓</div>
       <h2>Level ${S.L.n} — done.</h2>
-      <p style="color:var(--gloss);font-weight:600">完成了</p>
+      <p style="color:var(--gloss);font-weight:600">${pick('完成了','เสร็จแล้ว')}</p>
       ${bonus?`<p style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent)">+${bonus} points · Level bonus</p>`:''}
-      ${rankedUp?`<p style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--gloss)">↑ New rank: ${rAfter.en} · ${rAfter.zh}</p>`:''}
+      ${rankedUp?`<p style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--gloss)">↑ New rank: ${rAfter.en} · ${gl(rAfter)}</p>`:''}
       <div class="wordrun">${S.L.words.map(w=>`<span>${w}</span>`).join('')}</div>
       <div class="act">
         <button class="key btn go" id="nx">Next level →</button>
         <button class="key btn ghost" id="hm">Home</button>
       </div>
     </div>`;
-  $('#hm').onclick=()=>{ renderHome(); show('home'); setBar('Word Lab','English first · 英语优先'); };
+  $('#hm').onclick=()=>{ renderHome(); show('home'); setBar('Word Lab',barTagline()); };
   $('#nx').onclick=()=>{
     const nx=LEVELS.find(l=>!P.done.includes(l.n));
     if(nx) startLevel(nx.n); else { renderHome(); show('home'); setBar('Word Lab','All levels done'); }
@@ -754,7 +888,7 @@ function guidedAdvance(delay){ addPoints(guidedPoints()); setTimeout(nextItem, d
 function judge(ok, correctText, onGuide){
   const fb=$('#fb');
   if(ok){
-    fb.className='fb on yes'; fb.textContent='✓ Right. 对了';
+    fb.className='fb on yes'; fb.textContent='✓ Right. '+pick('对了','ถูกต้อง');
     if(S.tries===0 && S.curWord){ stat(S.curWord).ok++; P.first.r++; }
     if(S.tries===0) P.first.t++;
     const pts = S.tries===0 ? stepBase() : Math.max(2, Math.round(stepBase()*0.6));
@@ -765,11 +899,11 @@ function judge(ok, correctText, onGuide){
   S.tries++;
   if(S.curWord) stat(S.curWord).bad++;
   if(S.tries===1){
-    fb.className='fb on retry'; fb.textContent='Try again. 再试一次';
+    fb.className='fb on retry'; fb.textContent='Try again. '+pick('再试一次','ลองอีกครั้ง');
     if(S.curSay) say(S.curSay);
   } else {
     S.streak++;
-    fb.className='fb on retry'; fb.textContent='Look — this one. 看这个。Copy it. 照着做';
+    fb.className='fb on retry'; fb.textContent='Look — this one. '+pick('看这个。Copy it. 照着做','ดูตรงนี้ Copy it. ทำตามนี้');
     S.guided=true; onGuide && onGuide();
   }
   save();
@@ -797,27 +931,27 @@ function rCards(){
           <div class="zh-out" data-zh="${w}"></div>
           <div class="row">
             <button class="mini" data-say="${w}">🔊</button>
-            <button class="mini zh" data-rev="${w}">中</button>
+            <button class="mini zh" data-rev="${w}">${pick('中','ไทย')}</button>
           </div>
         </div>`).join('')}
       ${glue.length?`<div class="label-card" style="flex-wrap:wrap">
         <span class="lc-en" style="width:100%;margin-bottom:.3rem;color:var(--ink3)">Helper words</span>
-        ${glue.map(g=>`<span class="lc-en">${g}</span><span style="color:var(--gloss);font-weight:600;margin-right:.7rem">${(W[g]&&W[g].zh)||''}</span>`).join('')}
+        ${glue.map(g=>`<span class="lc-en">${g}</span><span style="color:var(--gloss);font-weight:600;margin-right:.7rem">${gl(W[g])}</span>`).join('')}
       </div>`:''}
       ${L.note?`<div class="label-card" style="flex-direction:column;align-items:flex-start;gap:.5rem">
         <div><span class="lc-en">${L.note.en}</span></div>
-        <div style="color:var(--gloss);font-weight:600">${L.note.zh}</div>
+        <div style="color:var(--gloss);font-weight:600">${gl(L.note)}</div>
         <div style="display:flex;gap:.6rem;flex-wrap:wrap">${L.note.ex.map(x=>`<span class="mini" style="flex:none">${x}</span>`).join('')}</div>
       </div>`:''}
-      ${(L.labels||[]).map(([en,zh])=>`
-        <div class="label-card"><span class="lc-en">${en}</span><span class="lc-zh">${zh}</span></div>`).join('')}
+      ${(L.labels||[]).map(([en,zh,th])=>`
+        <div class="label-card"><span class="lc-en">${en}</span><span class="lc-zh">${pick(zh,th)}</span></div>`).join('')}
     </div>
-    <div class="act"><button class="key btn go" id="go">Next → 下一个</button></div>`;
+    <div class="act"><button class="key btn go" id="go">${pick('Next → 下一个','ถัดไป')}</button></div>`;
   function firstTouch(w){ if(P.seenWords[w]) return false; P.seenWords[w]=true; addPoints(2); return true; }
   $('#v-task').querySelectorAll('[data-say]').forEach(b=>b.onclick=()=>{ say(b.dataset.say); stat(b.dataset.say).seen++; firstTouch(b.dataset.say); save(); });
   $('#v-task').querySelectorAll('[data-rev]').forEach(b=>b.onclick=()=>{
     const w=b.dataset.rev, out=$('#v-task').querySelector(`[data-zh="${w}"]`);
-    out.textContent = out.textContent ? '' : W[w].zh;
+    out.textContent = out.textContent ? '' : gl(W[w]);
     if(out.textContent){ stat(w).zh++; firstTouch(w); save(); }
   });
   $('#go').onclick=()=>finishStep();
@@ -957,7 +1091,7 @@ function rType(it){
     <input class="typed" id="inp" type="text" inputmode="text"
       autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Type here…">
     <div class="act">
-      <button class="key btn ghost" id="showme" style="flex:1">Show me 给我看</button>
+      <button class="key btn ghost" id="showme" style="flex:1">Show me ${pick('给我看','ให้ฉันดู')}</button>
       <button class="key btn go" id="chk">Check ✓</button>
     </div>
     <div class="fb" id="fb"></div>`;
@@ -993,16 +1127,29 @@ function rType(it){
 }
 
 /* ---------- TEACHER ---------- */
+let teacherStudents = null;
 let teacherViewing = null;
-function renderTeacher(){
-  const ids=Object.keys(PROFILES);
-  if(!teacherViewing || !PROFILES[teacherViewing]) teacherViewing = activeId || ids[0] || null;
-  if(!teacherViewing){
-    $('#v-teacher').innerHTML = `<div class="sheet"><h2>No students yet</h2>
-      <p class="sub">Add a name on the "Who is learning?" screen first.</p></div>`;
+async function renderTeacher(){
+  $('#v-teacher').innerHTML = `<div class="spinner"></div><p class="muted" style="text-align:center">Loading students…</p>`;
+  try{
+    teacherStudents = await window.WordLabFB.listStudents();
+  }catch(e){
+    console.error('list students failed', e);
+    $('#v-teacher').innerHTML = `<div class="sheet"><h2>Couldn't load students</h2>
+      <p class="sub">Check your internet connection and try again.</p></div>
+      <button class="key btn ghost" id="tretry" style="width:100%">Retry</button>`;
+    $('#tretry').onclick=renderTeacher;
     return;
   }
-  const vp = PROFILES[teacherViewing];
+  if(!teacherViewing || !teacherStudents.find(s=>s.id===teacherViewing)) teacherViewing = teacherStudents[0]?.id || null;
+  if(!teacherViewing){
+    $('#v-teacher').innerHTML = `<div class="sheet"><h2>No students yet</h2>
+      <p class="sub">Once a student signs in on their device, they'll show up here.</p></div>
+      <button class="key btn ghost" id="tretry" style="width:100%">Refresh</button>`;
+    $('#tretry').onclick=renderTeacher;
+    return;
+  }
+  const vp = teacherStudents.find(s=>s.id===teacherViewing);
   const words=Object.entries(vp.stats||{});
   const learned=words.filter(([,s])=>s.ok>0).length;
   const acc = vp.first && vp.first.t ? Math.round(100*vp.first.r/vp.first.t) : 0;
@@ -1014,15 +1161,16 @@ function renderTeacher(){
     <div class="sheet">
       <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:.9rem;flex-wrap:wrap">
         <h2 style="margin-bottom:0">${vp.name}</h2>
-        <span class="rk">${rk.en} · ${rk.zh}</span>
-        ${ids.length>1?`<select id="pswitch" style="margin-left:auto;font:inherit;font-size:13px;padding:.35rem .6rem;border-radius:7px;border:1.5px solid var(--edge);background:var(--sunk);color:var(--ink)">
-          ${ids.map(id=>`<option value="${id}" ${id===teacherViewing?'selected':''}>${PROFILES[id].name}</option>`).join('')}
+        <span class="rk">${rk.en} · ${gl(rk)}</span>
+        ${teacherStudents.length>1?`<select id="pswitch" style="margin-left:auto;font:inherit;font-size:13px;padding:.35rem .6rem;border-radius:7px;border:1.5px solid var(--edge);background:var(--sunk);color:var(--ink)">
+          ${teacherStudents.map(s=>`<option value="${s.id}" ${s.id===teacherViewing?'selected':''}>${s.name}</option>`).join('')}
         </select>`:''}
+        <button class="linkish" id="trefresh" style="padding:0;font-size:12px">↻ Refresh</button>
       </div>
-      <div class="sub">Word Lab · Grade 8 AI Unit · screenshot this page</div>
+      <div class="sub">Word Lab · Grade 8 AI Unit · ${vp.email||''}</div>
       <div class="stats">
         <div class="stat"><b>★ ${vp.points||0}</b><span>points</span></div>
-        <div class="stat"><b>${vp.done.length}/${LEVELS.length}</b><span>levels done</span></div>
+        <div class="stat"><b>${(vp.done||[]).length}/${LEVELS.length}</b><span>levels done</span></div>
         <div class="stat"><b>${acc}%</b><span>right first try</span></div>
       </div>
       <div class="stats" style="grid-template-columns:1fr">
@@ -1031,7 +1179,7 @@ function renderTeacher(){
       <div class="tsec">
         <h3>Still hard</h3>
         ${hard.length? `<div class="hardlist">${hard.map(([w,s])=>
-          `<span class="hard">${w}${s.zh>=3?` <span class="zh">中×${s.zh}</span>`:''}</span>`).join('')}</div>`
+          `<span class="hard">${w}${s.zh>=3?` <span class="zh">${pick('中','ไทย')}×${s.zh}</span>`:''}</span>`).join('')}</div>`
           : `<p class="muted">Nothing flagged yet.</p>`}
       </div>
       <div class="tsec">
@@ -1044,26 +1192,33 @@ function renderTeacher(){
     <div class="act">
       <button class="key btn ghost" id="unlock" style="flex:1">Unlock all levels</button>
       <button class="key btn ghost" id="reset" style="flex:1">Reset ${vp.name}'s progress</button>
-    </div>`;
+    </div>
+    <button class="key btn ghost" id="tsignout" style="width:100%;margin-top:.8rem">Sign out</button>`;
   $('#pswitch')?.addEventListener('change', e=>{ teacherViewing=e.target.value; renderTeacher(); });
-  $('#unlock').onclick=()=>{
-    vp.done=LEVELS.map(l=>l.n); PROFILES[teacherViewing]=vp; store.set('profiles',PROFILES);
-    if(teacherViewing===activeId) P=vp;
+  $('#trefresh').onclick=renderTeacher;
+  $('#tsignout').onclick=()=>window.WordLabFB.signOut();
+  $('#unlock').onclick=async()=>{
+    const {id, ...rest} = vp;
+    const updated={...rest, done:LEVELS.map(l=>l.n)};
+    await window.WordLabFB.saveStudent(teacherViewing, updated);
     renderTeacher();
   };
-  $('#reset').onclick=()=>{
-    if(confirm(`Delete ${vp.name}'s progress and points? Their name stays.`)){
-      PROFILES[teacherViewing]=blankProfile(vp.name); store.set('profiles',PROFILES);
-      if(teacherViewing===activeId) P=PROFILES[teacherViewing];
+  $('#reset').onclick=async()=>{
+    if(confirm(`Delete ${vp.name}'s progress and points? Their sign-in stays the same.`)){
+      const fresh=blankProfile(vp.name, vp.email);
+      await window.WordLabFB.saveStudent(teacherViewing, fresh);
       renderTeacher();
     }
   };
 }
 
 /* ---------- go ---------- */
-if(activeId && PROFILES[activeId]){
-  renderHome(); show('home');
-} else {
-  renderProfilePicker(); show('profile'); setBar('Word Lab','Who is learning?');
-}
+/* The sign-in button lives at the top of the Home page itself (see identityBlockHTML),
+   not on a separate screen. Render Home immediately with a "checking…" indicator;
+   window.onWordLabAuth (fired by the Firebase module above) fills in the real state
+   moments later — sign-in prompt, or the student's/teacher's loaded data. */
+renderHome();
+show('home');
 </script>
+</body>
+</html>
