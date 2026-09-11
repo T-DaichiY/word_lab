@@ -328,6 +328,11 @@ input.typed:focus{border-color:var(--accent);outline:none}
 #ptoast.big{font-size:1.15rem;line-height:1.45;text-align:center;padding:.9rem 1.4rem;font-weight:700}
 
 /* ---------- sign-in ---------- */
+#fberr{margin:0 0 1rem;padding:.85rem 1rem;border:1px solid var(--gloss);border-radius:var(--r);
+  background:var(--gloss-soft);color:var(--ink);font-size:.92rem;line-height:1.5}
+#fberr b{display:block;margin-bottom:.25rem;font-family:'Bricolage Grotesque',sans-serif}
+#fberr code{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--ink2);
+  word-break:break-word;display:block;margin-top:.35rem}
 .gsignin{display:inline-flex;align-items:center;gap:.6rem;font-family:'Bricolage Grotesque',sans-serif;
   font-weight:700;font-size:1rem;padding:.9rem 1.4rem;background:#fff;color:#1f1f1f;border:1.5px solid #dadce0;
   border-bottom-width:4px;border-radius:var(--r)}
@@ -349,7 +354,8 @@ input.typed:focus{border-color:var(--accent);outline:none}
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
   import {
-    getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
+    getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect,
+    getRedirectResult, signOut, onAuthStateChanged
   } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
   import {
     initializeFirestore, persistentLocalCache, doc, getDoc, setDoc,
@@ -372,24 +378,58 @@ input.typed:focus{border-color:var(--accent);outline:none}
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ hd: SCHOOL_DOMAIN });
 
+  // Report a failure to the on-page diagnostics line (never a silent dead button).
+  const fail = (where, e) => {
+    const msg = (e && (e.code || e.message)) ? (e.code || '') + ' ' + (e.message || '') : String(e);
+    console.error('[WordLab] ' + where, e);
+    if (window.onWordLabError) window.onWordLabError(where, msg.trim());
+  };
+
+  // Safari/iPad often blocks the sign-in popup (cross-site tracking prevention,
+  // or a plain popup blocker). Fall back to a full-page redirect in that case.
+  const POPUP_BLOCKED = [
+    'auth/popup-blocked', 'auth/popup-closed-by-user',
+    'auth/cancelled-popup-request', 'auth/operation-not-supported-in-this-environment',
+    'auth/web-storage-unsupported'
+  ];
+
   window.WordLabFB = {
     signIn: async () => {
-      try { await signInWithPopup(auth, provider); }
-      catch (e) { if (e.code !== 'auth/popup-closed-by-user') alert('Sign-in failed: ' + e.message); }
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (e) {
+        if (POPUP_BLOCKED.includes(e.code)) {
+          try { await signInWithRedirect(auth, provider); }
+          catch (e2) { fail('sign-in (redirect)', e2); }
+        } else {
+          fail('sign-in', e);
+        }
+      }
     },
-    signOut: async () => { await signOut(auth); },
+    signOut: async () => {
+      try { await signOut(auth); } catch (e) { fail('sign-out', e); }
+    },
     loadStudent: async (uid) => {
-      const snap = await getDoc(doc(db, 'students', uid));
-      return snap.exists() ? snap.data() : null;
+      try {
+        const snap = await getDoc(doc(db, 'students', uid));
+        return snap.exists() ? snap.data() : null;
+      } catch (e) { fail('load progress', e); throw e; }
     },
     saveStudent: async (uid, data) => {
-      await setDoc(doc(db, 'students', uid), { ...data, updatedAt: serverTimestamp() });
+      try {
+        await setDoc(doc(db, 'students', uid), { ...data, updatedAt: serverTimestamp() });
+      } catch (e) { fail('save progress', e); throw e; }
     },
     listStudents: async () => {
-      const snap = await getDocs(collection(db, 'students'));
-      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      try {
+        const snap = await getDocs(collection(db, 'students'));
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      } catch (e) { fail('teacher report', e); throw e; }
     },
   };
+
+  // Completes the redirect flow when the popup fallback was used.
+  getRedirectResult(auth).catch(e => fail('sign-in (returning)', e));
 
   onAuthStateChanged(auth, (user) => {
     if (!user) { window.onWordLabAuth(null); return; }
@@ -417,6 +457,7 @@ input.typed:focus{border-color:var(--accent);outline:none}
 </div>
 
 <main>
+  <div id="fberr" hidden></div>
   <section class="view" id="v-home"></section>
   <section class="view" id="v-task"></section>
   <section class="view" id="v-teacher"></section>
@@ -744,10 +785,36 @@ $('#ptsbadge').addEventListener('click',()=>{ renderHome(); show('home'); setBar
 function setBar(a,b){ $('#barlv').textContent=a; $('#barname').textContent=b; }
 
 /* ---------- SIGN IN (Google, restricted to the school domain) ---------- */
+
+/* A visible failure beats a dead button. Anything that goes wrong talking to
+   Firebase lands here, on the page, with the raw code so it can be reported. */
+function showFbError(where, detail){
+  const el=$('#fberr'); if(!el) return;
+  el.innerHTML = `<b>Could not ${where}.</b>Try again, or reload the page. If it keeps
+    happening, show your teacher this message:<code>${String(detail).replace(/[<&]/g,c=>c==='<'?'&lt;':'&amp;')}</code>`;
+  el.hidden=false;
+}
+function clearFbError(){ const el=$('#fberr'); if(el) el.hidden=true; }
+window.onWordLabError = showFbError;
+
+/* If the Firebase module never loads at all (blocked gstatic.com, offline, an
+   extension), onWordLabAuth is never called and the page would sit silent. */
+setTimeout(()=>{
+  if(!authChecked){
+    /* Draw the signed-out page anyway, so the student sees the app and a
+       reason — not an empty white screen. */
+    authChecked=true;
+    uid=null; userEmail=null; isTeacher=false; authError=null; authLoading=false;
+    renderHome(); show('home'); setBar('Word Lab','Sign in to learn');
+    showFbError('reach Google sign-in',
+      'No response from Firebase after 12s — most likely the network is blocking gstatic.com / googleapis.com.');
+  }
+}, 12000);
+
 /* ---------- auth state → app state ---------- */
 let authLoading=false, authError=null, authChecked=false;
 window.onWordLabAuth = async function(authState){
-  authChecked=true;
+  authChecked=true; clearFbError();
   if(authState===null){
     uid=null; userEmail=null; isTeacher=false; authError=null; authLoading=false;
     renderHome(); show('home'); setBar('Word Lab','Sign in to learn');
@@ -855,7 +922,11 @@ function renderHome(){
   loadVoices();
   $('#vsel').onchange=e=>{ best=voices.find(v=>v.name===e.target.value)||best; store.set('voice',e.target.value); say('Hello. This is the new voice.'); };
   $('#vtest').onclick=()=>say('Listen and choose.');
-  $('#gsignin')?.addEventListener('click',()=>window.WordLabFB.signIn());
+  $('#gsignin')?.addEventListener('click',()=>{
+    if(!window.WordLabFB){ showFbError('connect to Google',
+      'The Firebase code did not load. This is usually the school network or a browser extension blocking gstatic.com.'); return; }
+    window.WordLabFB.signIn();
+  });
   $('#switchp')?.addEventListener('click',()=>{ flushSave(); window.WordLabFB.signOut(); });
   $('#toteacher')?.addEventListener('click',()=>{ show('teacher'); setBar('Report','For the teacher'); renderTeacher(); });
   $('#v-home').querySelectorAll('[data-lv]').forEach(b=>b.onclick=()=>startLevel(+b.dataset.lv));
