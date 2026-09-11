@@ -11,39 +11,52 @@
 :root{
   --ground:#eceef2; --surface:#ffffff; --sunk:#e2e6ee; --edge:#c8cfdb; --edge2:#aab4c6;
   --ink:#151a22; --ink2:#4c5666; --ink3:#7b8698;
-  --accent:#1e46b8; --accent-ink:#ffffff; --accent-soft:#dfe6fb;
+  --accent:#1e46b8; --accent-2:#1e46b8; --accent-ink:#ffffff; --accent-soft:#dfe6fb;
   --gloss:#c2504a; --gloss-soft:#fbe6e4;
   --yes:#17703f; --yes-soft:#dcf0e4;
   --retry:#9a5b06; --retry-soft:#fbeeda;
   --key-drop:#b9c2d1;
+  --glass-bg:var(--surface); --glass-border:var(--edge); --blur:0px;
+  --aurora-a:transparent; --aurora-b:transparent;
   --r:10px;
 }
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
-    --ground:#12151b; --surface:#1c212a; --sunk:#161b22; --edge:#2c3440; --edge2:#3d4757;
-    --ink:#e9edf4; --ink2:#a7b2c2; --ink3:#78out; --ink3:#7d8798;
-    --accent:#7ea2ff; --accent-ink:#0d1220; --accent-soft:#22304d;
-    --gloss:#ef968f; --gloss-soft:#3a2220;
-    --yes:#5cc98a; --yes-soft:#16301f;
-    --retry:#e0a94a; --retry-soft:#332714;
-    --key-drop:#0c0f14;
+    --ground:#08090c; --surface:#15171d; --sunk:#0f1116; --edge:#262a34; --edge2:#3a4050;
+    --ink:#f1f3f8; --ink2:#a9b1c2; --ink3:#767e91;
+    --accent:#8b9dff; --accent-2:#c98bff; --accent-ink:#0a0c14; --accent-soft:#232849;
+    --gloss:#ff9a8e; --gloss-soft:#3a2027;
+    --yes:#5fd39a; --yes-soft:#122a20;
+    --retry:#f0b25c; --retry-soft:#332512;
+    --key-drop:#020204;
+    --glass-bg:rgba(255,255,255,.055); --glass-border:rgba(255,255,255,.11); --blur:20px;
+    --aurora-a:rgba(139,157,255,.22); --aurora-b:rgba(201,139,255,.16);
   }
 }
 :root[data-theme="dark"]{
-  --ground:#12151b; --surface:#1c212a; --sunk:#161b22; --edge:#2c3440; --edge2:#3d4757;
-  --ink:#e9edf4; --ink2:#a7b2c2; --ink3:#7d8798;
-  --accent:#7ea2ff; --accent-ink:#0d1220; --accent-soft:#22304d;
-  --gloss:#ef968f; --gloss-soft:#3a2220;
-  --yes:#5cc98a; --yes-soft:#16301f;
-  --retry:#e0a94a; --retry-soft:#332714;
-  --key-drop:#0c0f14;
+  --ground:#08090c; --surface:#15171d; --sunk:#0f1116; --edge:#262a34; --edge2:#3a4050;
+  --ink:#f1f3f8; --ink2:#a9b1c2; --ink3:#767e91;
+  --accent:#8b9dff; --accent-2:#c98bff; --accent-ink:#0a0c14; --accent-soft:#232849;
+  --gloss:#ff9a8e; --gloss-soft:#3a2027;
+  --yes:#5fd39a; --yes-soft:#122a20;
+  --retry:#f0b25c; --retry-soft:#332512;
+  --key-drop:#020204;
+  --glass-bg:rgba(255,255,255,.055); --glass-border:rgba(255,255,255,.11); --blur:20px;
+  --aurora-a:rgba(139,157,255,.22); --aurora-b:rgba(201,139,255,.16);
 }
 
 *{box-sizing:border-box}
-body{margin:0;background:var(--ground);color:var(--ink);
+body{margin:0;background:var(--ground);color:var(--ink);position:relative;
   font-family:'Figtree',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
   font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased;
   -webkit-tap-highlight-color:transparent}
+/* vivid gradient wash — visible only where --aurora-a/b are non-transparent (dark theme) */
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(700px 500px at 12% -8%, var(--aurora-a), transparent 60%),
+    radial-gradient(680px 520px at 108% 18%, var(--aurora-b), transparent 60%);
+}
+#bar,main,#ptoast,#stopaudio{position:relative;z-index:1}
 h1,h2,h3{font-family:'Bricolage Grotesque','Figtree',sans-serif;font-weight:700;margin:0;text-wrap:balance;letter-spacing:-.01em}
 button{font-family:inherit;color:inherit;cursor:pointer}
 :focus-visible{outline:3px solid var(--accent);outline-offset:2px}
@@ -52,15 +65,25 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 /* ---------- keycap: the one interactive object ---------- */
 .key{background:var(--surface);border:1.5px solid var(--edge);border-bottom-width:4px;
   border-bottom-color:var(--key-drop);border-radius:var(--r);
-  transition:transform .06s ease, border-bottom-width .06s ease, background .12s, border-color .12s}
-.key:active:not(:disabled){transform:translateY(2px);border-bottom-width:2px}
+  transition:transform .16s cubic-bezier(.2,.8,.2,1), border-bottom-width .08s ease,
+    background .18s ease, border-color .18s ease, box-shadow .2s ease}
+.key:active:not(:disabled){transform:translateY(2px);border-bottom-width:2px;transition-duration:.06s}
 .key:disabled{opacity:.45}
 .key.is-yes{border-color:var(--yes);background:var(--yes-soft)}
 .key.is-retry{border-color:var(--retry);background:var(--retry-soft)}
 .key.is-target{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+@media (hover:hover){
+  .key:hover:not(:disabled):not(:active){transform:translateY(-3px);
+    border-color:var(--accent);box-shadow:0 12px 26px -12px rgba(0,0,0,.5)}
+}
+
+/* ---------- glass panels (chrome/containers — buttons stay solid for clarity) ---------- */
+.glass{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:var(--r);
+  backdrop-filter:blur(var(--blur)) saturate(150%); -webkit-backdrop-filter:blur(var(--blur)) saturate(150%)}
 
 /* ---------- shell ---------- */
-#bar{position:sticky;top:0;z-index:40;background:var(--surface);border-bottom:1.5px solid var(--edge)}
+#bar{position:sticky;top:0;z-index:40;background:var(--glass-bg);border-bottom:1px solid var(--glass-border);
+  backdrop-filter:blur(var(--blur)) saturate(150%); -webkit-backdrop-filter:blur(var(--blur)) saturate(150%)}
 .bar-in{max-width:640px;margin:0 auto;padding:.6rem 1rem;display:flex;align-items:center;gap:.85rem}
 .bar-back{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;padding:.45rem .7rem;
   background:var(--sunk);border:1.5px solid var(--edge);border-radius:8px;line-height:1}
@@ -78,12 +101,15 @@ main{max-width:640px;margin:0 auto;padding:1.1rem 1rem 6rem}
 .view{display:none}.view.on{display:block}
 
 /* ---------- home ---------- */
-.hero{margin-bottom:1.4rem}
-.hero .eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.16em;
-  text-transform:uppercase;color:var(--accent);margin-bottom:.5rem}
-.hero h1{font-size:2rem;line-height:1.1;margin-bottom:.45rem}
-.hero p{margin:0;color:var(--ink2);font-size:1rem;max-width:34ch}
-.hero .zh{color:var(--gloss);font-size:.95rem;margin-top:.3rem}
+.hero{margin-bottom:1.6rem;padding:1.5rem 1.4rem 1.6rem;background:var(--glass-bg);
+  border:1px solid var(--glass-border);border-radius:calc(var(--r) + 4px);
+  backdrop-filter:blur(var(--blur)) saturate(150%);-webkit-backdrop-filter:blur(var(--blur)) saturate(150%)}
+.hero .eyebrow{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:700;letter-spacing:.18em;
+  text-transform:uppercase;background:linear-gradient(90deg,var(--accent),var(--accent-2));
+  -webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:.6rem}
+.hero h1{font-size:2.6rem;line-height:1.05;margin-bottom:.55rem}
+.hero p{margin:0;color:var(--ink2);font-size:1.05rem;max-width:34ch}
+.hero .zh{color:var(--gloss);font-size:.98rem;margin-top:.4rem}
 
 .ladder{display:flex;flex-direction:column;gap:.55rem;margin-bottom:1.5rem}
 .lv{display:flex;align-items:center;gap:.9rem;padding:.85rem .95rem;text-align:left;width:100%}
@@ -98,8 +124,9 @@ main{max-width:640px;margin:0 auto;padding:1.1rem 1rem 6rem}
 .lv-s{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--ink3);flex:none}
 .lv.done .lv-s{color:var(--yes)}
 
-.voice{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;padding:.8rem .95rem;background:var(--sunk);
-  border:1.5px solid var(--edge);border-radius:var(--r);font-size:13px;color:var(--ink2);margin-bottom:.9rem}
+.voice{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;padding:.9rem 1.05rem;background:var(--glass-bg);
+  border:1px solid var(--glass-border);border-radius:var(--r);font-size:13px;color:var(--ink2);margin-bottom:1rem;
+  backdrop-filter:blur(var(--blur)) saturate(150%);-webkit-backdrop-filter:blur(var(--blur)) saturate(150%)}
 .voice select{font:inherit;font-size:13px;max-width:190px;padding:.3rem .5rem;border-radius:7px;
   border:1.5px solid var(--edge);background:var(--surface);color:var(--ink)}
 .linkish{background:none;border:none;padding:.5rem 0;font-size:14px;color:var(--accent);
@@ -179,7 +206,8 @@ input.typed:focus{border-color:var(--accent);outline:none}
 .act{display:flex;gap:.6rem;margin-top:1rem}
 .btn{flex:1;padding:.9rem 1rem;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:1.02rem;
   text-align:center}
-.btn.go{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);border-bottom-color:var(--accent)}
+.btn.go{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:var(--accent-ink);
+  border-color:var(--accent);border-bottom-color:color-mix(in srgb,var(--accent) 60%,black)}
 .btn.ghost{flex:0 0 auto;padding:.9rem 1rem;font-size:.95rem;color:var(--ink2)}
 
 /* done panel */
@@ -192,7 +220,9 @@ input.typed:focus{border-color:var(--accent);outline:none}
   border:1.5px solid var(--edge);border-radius:6px}
 
 /* teacher */
-.sheet{background:var(--surface);border:1.5px solid var(--edge);border-radius:var(--r);padding:1.1rem;margin-bottom:.9rem}
+.sheet{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:var(--r);
+  padding:1.4rem 1.3rem;margin-bottom:1.1rem;backdrop-filter:blur(var(--blur)) saturate(150%);
+  -webkit-backdrop-filter:blur(var(--blur)) saturate(150%)}
 .sheet h2{font-size:1.2rem;margin-bottom:.15rem}
 .sheet .sub{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
   color:var(--ink3);margin-bottom:.9rem}
@@ -275,8 +305,27 @@ input.typed:focus{border-color:var(--accent);outline:none}
 .rankline .rk{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.85rem;
   padding:.25rem .6rem;border-radius:100px;background:var(--gloss-soft);color:var(--gloss);
   border:1.5px solid var(--gloss)}
-.ptsbar{height:8px;border-radius:5px;background:var(--sunk);border:1.5px solid var(--edge);overflow:hidden;margin:.5rem 0 .3rem}
-.ptsbar i{display:block;height:100%;background:var(--accent);border-radius:5px 0 0 5px}
+.ptsbar{height:12px;border-radius:6px;background:var(--sunk);border:1.5px solid var(--edge);overflow:hidden;margin:.7rem 0 .35rem}
+.ptsbar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--gloss));border-radius:6px 0 0 6px;transition:width .5s ease}
+@media (prefers-reduced-motion:reduce){.ptsbar i{transition:none}}
+
+/* ---------- score display (the points are the headline) ---------- */
+.scoreline{display:flex;align-items:center;gap:.9rem}
+.lv-badge{flex:none;width:62px;height:62px;border-radius:14px;
+  background:linear-gradient(145deg,var(--accent),var(--accent-2));color:#fff;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;
+  box-shadow:0 3px 0 var(--accent-deep,rgba(0,0,0,.35))}
+.lv-num{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:1.9rem}
+.lv-cap{font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:.14em;opacity:.85;margin-top:2px}
+.score-main{flex:1;min-width:0}
+.score-pts{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:2.5rem;line-height:1;
+  color:var(--ink);display:flex;align-items:baseline;gap:.3rem;font-variant-numeric:tabular-nums}
+.score-pts .star{color:var(--gloss);font-size:1.6rem}
+.score-pts .pts-cap{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:var(--ink3);
+  letter-spacing:.08em;text-transform:uppercase;margin-left:.15rem}
+.score-rank{font-weight:600;font-size:1rem;margin-top:.25rem}
+.score-rank-gl{color:var(--gloss);font-weight:600}
+#ptoast.big{font-size:1.15rem;line-height:1.45;text-align:center;padding:.9rem 1.4rem;font-weight:700}
 
 /* ---------- sign-in ---------- */
 .gsignin{display:inline-flex;align-items:center;gap:.6rem;font-family:'Bricolage Grotesque',sans-serif;
@@ -576,23 +625,43 @@ window.addEventListener('visibilitychange', ()=>{ if(document.visibilityState===
 window.addEventListener('beforeunload', flushSave);
 function stat(w){ return P.stats[w] || (P.stats[w]={seen:0,ok:0,bad:0,zh:0}); }
 
-/* ---------------- points + rank ---------------- */
+/* ---------------- points + levels ----------------
+   "Level" = the points ladder (below). "Lesson" = the 9 curriculum units.
+   Kept as separate words on purpose so a beginner never confuses them.        */
 const RANKS = [
-  {min:0,    en:'New Recruit',   zh:'新学员',     th:'นักเรียนใหม่'},
-  {min:150,  en:'Trainee',       zh:'学徒',       th:'ผู้ฝึกงาน'},
-  {min:400,  en:'Operator',      zh:'操作员',     th:'ผู้ควบคุม'},
-  {min:800,  en:'Analyst',       zh:'分析员',     th:'นักวิเคราะห์'},
-  {min:1300, en:'Specialist',    zh:'专家',       th:'ผู้เชี่ยวชาญ'},
-  {min:2000, en:'Lab Expert',    zh:'实验室专家', th:'ผู้เชี่ยวชาญห้องแล็บ'},
+  {lv:1,  min:0,    en:'Starter',        zh:'新手',       th:'มือใหม่'},
+  {lv:2,  min:60,   en:'Listener',       zh:'聆听者',     th:'ผู้ฟัง'},
+  {lv:3,  min:140,  en:'Word Finder',    zh:'找词者',     th:'นักค้นคำ'},
+  {lv:4,  min:240,  en:'Reader',         zh:'阅读者',     th:'นักอ่าน'},
+  {lv:5,  min:360,  en:'Speller',        zh:'拼写者',     th:'นักสะกดคำ'},
+  {lv:6,  min:500,  en:'Sentence Maker', zh:'造句者',     th:'นักแต่งประโยค'},
+  {lv:7,  min:660,  en:'Fast Typer',     zh:'打字快手',   th:'นักพิมพ์เร็ว'},
+  {lv:8,  min:840,  en:'Word Keeper',    zh:'记词者',     th:'ผู้จำคำ'},
+  {lv:9,  min:1040, en:'Quick Thinker',  zh:'快思者',     th:'นักคิดเร็ว'},
+  {lv:10, min:1260, en:'Sharp Eye',      zh:'火眼金睛',   th:'ตาไว'},
+  {lv:11, min:1500, en:'Strong Speaker', zh:'表达高手',   th:'นักพูดเก่ง'},
+  {lv:12, min:1800, en:'Word Master',    zh:'单词大师',   th:'ผู้เชี่ยวชาญคำศัพท์'},
 ];
 function rankFor(pts){ let r=RANKS[0]; for(const x of RANKS){ if(pts>=x.min) r=x; } return r; }
 function nextRank(pts){ return RANKS.find(x=>x.min>pts) || null; }
 let pointsFloat=null;
 function addPoints(n, why){
   if(!n) return;
+  const before = rankFor(P.points||0).lv;
   P.points=(P.points||0)+n; save();
+  const after = rankFor(P.points).lv;
   updatePtsBadge();
-  showPointsToast(n);
+  if(after>before) showLevelUp(rankFor(P.points));
+  else showPointsToast(n);
+}
+function showLevelUp(rk){
+  const el=$('#ptoast');
+  if(!el) return;
+  clearTimeout(pointsFloat);
+  el.innerHTML = `<span style="font-size:.65em;opacity:.85">LEVEL UP</span><br>Lv ${rk.lv} · ${rk.en}<br><span style="font-size:.6em;color:var(--gloss)">${gl(rk)}</span>`;
+  el.classList.add('big');
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  pointsFloat=setTimeout(()=>{ el.classList.remove('show'); el.classList.remove('big'); },2200);
 }
 function showPointsToast(n){
   clearTimeout(pointsFloat);
@@ -662,14 +731,14 @@ let view='home';
 function show(v){
   view=v;
   ['home','task','teacher'].forEach(k=>$('#v-'+k).classList.toggle('on',k===v));
-  $('#back').hidden = (v==='home');
+  $('#back').hidden = (v==='home' || v==='teacher');
   $('#rail').hidden = (v!=='task');
   $('#repeat').hidden = (v!=='task');
-  $('#ptsbadge').hidden = (!uid || isTeacher);
+  $('#ptsbadge').hidden = !uid;
   updatePtsBadge();
   window.scrollTo(0,0);
 }
-function updatePtsBadge(){ if(uid) $('#ptsbadge').textContent = '★ '+(P.points||0); }
+function updatePtsBadge(){ if(uid) $('#ptsbadge').textContent = 'Lv'+rankFor(P.points||0).lv+' · ★'+(P.points||0); }
 $('#back').addEventListener('click',()=>{ stopAudio(); renderHome(); show('home'); setBar('Word Lab',barTagline()); });
 $('#ptsbadge').addEventListener('click',()=>{ renderHome(); show('home'); setBar('Word Lab',barTagline()); });
 function setBar(a,b){ $('#barlv').textContent=a; $('#barname').textContent=b; }
@@ -690,12 +759,9 @@ window.onWordLabAuth = async function(authState){
     return;
   }
   uid=authState.uid; userEmail=authState.email;
+  /* The teacher gets the full student experience too (own progress doc), plus a link
+     to the report. Their own row is filtered out of the dashboard's student list. */
   isTeacher = (userEmail.toLowerCase()===TEACHER_EMAIL);
-  if(isTeacher){
-    show('teacher'); setBar('Report','For the teacher');
-    renderTeacher();
-    return;
-  }
   authLoading=true; authError=null;
   renderHome(); show('home'); setBar('Word Lab','Loading your progress…');
   try{
@@ -718,17 +784,23 @@ window.onWordLabAuth = async function(authState){
 const GOOGLE_G = `<svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>`;
 
 function identityBlockHTML(){
-  const signedIn = !!uid && !isTeacher;
+  const signedIn = !!uid;
   if(signedIn){
     const rk = rankFor(P.points||0), nx = nextRank(P.points||0);
     const span = nx ? (nx.min-rk.min) : 1;
     const into = nx ? Math.min(100, Math.round(100*((P.points||0)-rk.min)/span)) : 100;
     return `
-      <div class="rankline"><span class="rk">${rk.en} · ${gl(rk)}</span>
-        <button class="linkish" id="switchp" style="margin-left:auto;padding:0;font-size:12.5px">Not ${P.name}? Sign out →</button></div>
-      <div style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.6rem">★ ${P.points||0} <span style="font-size:12px;color:var(--ink3);font-weight:500">points</span></div>
+      <div class="scoreline">
+        <div class="lv-badge"><span class="lv-num">${rk.lv}</span><span class="lv-cap">LEVEL</span></div>
+        <div class="score-main">
+          <div class="score-pts"><span class="star">★</span>${P.points||0}<span class="pts-cap">points</span></div>
+          <div class="score-rank">${rk.en} <span class="score-rank-gl">${gl(rk)}</span></div>
+        </div>
+        <button class="linkish" id="switchp" style="padding:0;font-size:12px;align-self:flex-start">Sign out</button>
+      </div>
       <div class="ptsbar"><i style="width:${into}%"></i></div>
-      <div style="font-size:11.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace">${nx ? (nx.min-(P.points||0))+' to '+nx.en : 'Top rank reached'}</div>`;
+      <div style="font-size:11.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace">${nx ? (nx.min-(P.points||0))+' points → Lv '+nx.lv+' '+nx.en : '🏆 Top level reached'}</div>
+      ${isTeacher?`<button class="key btn ghost" id="toteacher" style="width:100%;margin-top:.9rem">📋 Teacher report →</button>`:''}`;
   }
   if(!authChecked){
     return `<div style="display:flex;align-items:center;gap:.7rem"><div class="spinner" style="margin:0;width:24px;height:24px"></div><span>Checking sign-in…</span></div>`;
@@ -748,7 +820,7 @@ function identityBlockHTML(){
 }
 
 function renderHome(){
-  const signedIn = !!uid && !isTeacher;
+  const signedIn = !!uid;
   const nextN = signedIn ? (LEVELS.find(l=>!P.done.includes(l.n))?.n || LEVELS.length) : 0;
   const learned = signedIn ? Object.keys(P.stats).filter(w=>P.stats[w].ok>0).length : 0;
   $('#v-home').innerHTML = `
@@ -758,7 +830,7 @@ function renderHome(){
       <p>Learn the English words first. Then the AI words are easy.</p>
       <div class="zh">${pick('先学英语单词。然后 AI 单词就简单了。','เรียนคำศัพท์ภาษาอังกฤษก่อน แล้วคำ AI จะง่ายขึ้น')}</div>
     </div>
-    <div id="identity-block" style="padding:1rem 1.1rem;margin-bottom:1.1rem;background:var(--surface);border:1.5px solid var(--edge);border-radius:var(--r)">
+    <div id="identity-block" class="glass" style="padding:1.3rem 1.35rem;margin-bottom:1.3rem">
       ${identityBlockHTML()}
     </div>
     <div class="voice">
@@ -778,13 +850,14 @@ function renderHome(){
     </div>
     ${signedIn?`<div style="display:flex;align-items:center;gap:1rem">
       <span class="muted" style="font-family:'JetBrains Mono',monospace;font-size:12px">
-        ${P.done.length}/${LEVELS.length} levels · ${learned} words</span>
+        ${P.done.length}/${LEVELS.length} lessons · ${learned} words</span>
     </div>`:''}`;
   loadVoices();
   $('#vsel').onchange=e=>{ best=voices.find(v=>v.name===e.target.value)||best; store.set('voice',e.target.value); say('Hello. This is the new voice.'); };
   $('#vtest').onclick=()=>say('Listen and choose.');
   $('#gsignin')?.addEventListener('click',()=>window.WordLabFB.signIn());
   $('#switchp')?.addEventListener('click',()=>{ flushSave(); window.WordLabFB.signOut(); });
+  $('#toteacher')?.addEventListener('click',()=>{ show('teacher'); setBar('Report','For the teacher'); renderTeacher(); });
   $('#v-home').querySelectorAll('[data-lv]').forEach(b=>b.onclick=()=>startLevel(+b.dataset.lv));
 }
 
@@ -809,7 +882,7 @@ function startLevel(n){
 function setRail(){
   $('#rail').innerHTML = STEP_ASK.map((_,k)=>
     `<i class="${k===S.step?'on':(k<S.step?'past':'')}"></i>`).join('');
-  setBar('Level '+S.L.n+' · Step '+(S.step+1)+'/7', S.L.title);
+  setBar('Lesson '+S.L.n+' · Step '+(S.step+1)+'/7', S.L.title);
 }
 function buildStep(){
   const L=S.L, pool=pictured(L.n), own=L.words;
@@ -858,24 +931,24 @@ function finishLevel(){
   const rAfter = rankFor(P.points);
   const rankedUp = rAfter.en!==rBefore.en;
   $('#rail').hidden=true; $('#repeat').hidden=true;
-  setBar('Level '+S.L.n,'Done');
+  setBar('Lesson '+S.L.n,'Done');
   $('#v-task').innerHTML=`
     <div class="key done">
       <div class="tick">✓</div>
-      <h2>Level ${S.L.n} — done.</h2>
+      <h2>Lesson ${S.L.n} — done.</h2>
       <p style="color:var(--gloss);font-weight:600">${pick('完成了','เสร็จแล้ว')}</p>
-      ${bonus?`<p style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent)">+${bonus} points · Level bonus</p>`:''}
-      ${rankedUp?`<p style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--gloss)">↑ New rank: ${rAfter.en} · ${gl(rAfter)}</p>`:''}
+      ${bonus?`<p style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent)">+${bonus} points · Lesson bonus</p>`:''}
+      ${rankedUp?`<p style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--gloss)">↑ LEVEL UP — Lv ${rAfter.lv} · ${rAfter.en} · ${gl(rAfter)}</p>`:''}
       <div class="wordrun">${S.L.words.map(w=>`<span>${w}</span>`).join('')}</div>
       <div class="act">
-        <button class="key btn go" id="nx">Next level →</button>
+        <button class="key btn go" id="nx">Next lesson →</button>
         <button class="key btn ghost" id="hm">Home</button>
       </div>
     </div>`;
   $('#hm').onclick=()=>{ renderHome(); show('home'); setBar('Word Lab',barTagline()); };
   $('#nx').onclick=()=>{
     const nx=LEVELS.find(l=>!P.done.includes(l.n));
-    if(nx) startLevel(nx.n); else { renderHome(); show('home'); setBar('Word Lab','All levels done'); }
+    if(nx) startLevel(nx.n); else { renderHome(); show('home'); setBar('Word Lab','All lessons done'); }
   };
 }
 
@@ -1127,26 +1200,44 @@ function rType(it){
 }
 
 /* ---------- TEACHER ---------- */
+/* Always-present footer so the dashboard is never a dead end, even when empty or erroring. */
+function teacherFooterHTML(){
+  return `<div class="act" style="margin-top:.8rem">
+    <button class="key btn ghost" id="tohome" style="flex:1">← Student view</button>
+    <button class="key btn ghost" id="tsignout" style="flex:1">Sign out</button>
+  </div>`;
+}
+function bindTeacherFooter(){
+  $('#tohome')?.addEventListener('click',()=>{ renderHome(); show('home'); setBar('Word Lab',barTagline()); });
+  $('#tsignout')?.addEventListener('click',()=>window.WordLabFB.signOut());
+}
+
 let teacherStudents = null;
 let teacherViewing = null;
 async function renderTeacher(){
   $('#v-teacher').innerHTML = `<div class="spinner"></div><p class="muted" style="text-align:center">Loading students…</p>`;
   try{
-    teacherStudents = await window.WordLabFB.listStudents();
+    const all = await window.WordLabFB.listStudents();
+    /* hide the teacher's own practice profile from the class report */
+    teacherStudents = all.filter(s=>(s.email||'').toLowerCase()!==TEACHER_EMAIL);
   }catch(e){
     console.error('list students failed', e);
     $('#v-teacher').innerHTML = `<div class="sheet"><h2>Couldn't load students</h2>
       <p class="sub">Check your internet connection and try again.</p></div>
-      <button class="key btn ghost" id="tretry" style="width:100%">Retry</button>`;
+      <button class="key btn ghost" id="tretry" style="width:100%">Retry</button>
+      ${teacherFooterHTML()}`;
     $('#tretry').onclick=renderTeacher;
+    bindTeacherFooter();
     return;
   }
   if(!teacherViewing || !teacherStudents.find(s=>s.id===teacherViewing)) teacherViewing = teacherStudents[0]?.id || null;
   if(!teacherViewing){
     $('#v-teacher').innerHTML = `<div class="sheet"><h2>No students yet</h2>
       <p class="sub">Once a student signs in on their device, they'll show up here.</p></div>
-      <button class="key btn ghost" id="tretry" style="width:100%">Refresh</button>`;
+      <button class="key btn ghost" id="tretry" style="width:100%">Refresh</button>
+      ${teacherFooterHTML()}`;
     $('#tretry').onclick=renderTeacher;
+    bindTeacherFooter();
     return;
   }
   const vp = teacherStudents.find(s=>s.id===teacherViewing);
@@ -1161,7 +1252,7 @@ async function renderTeacher(){
     <div class="sheet">
       <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:.9rem;flex-wrap:wrap">
         <h2 style="margin-bottom:0">${vp.name}</h2>
-        <span class="rk">${rk.en} · ${gl(rk)}</span>
+        <span class="rk">Lv ${rk.lv} · ${rk.en} · ${gl(rk)}</span>
         ${teacherStudents.length>1?`<select id="pswitch" style="margin-left:auto;font:inherit;font-size:13px;padding:.35rem .6rem;border-radius:7px;border:1.5px solid var(--edge);background:var(--sunk);color:var(--ink)">
           ${teacherStudents.map(s=>`<option value="${s.id}" ${s.id===teacherViewing?'selected':''}>${s.name}</option>`).join('')}
         </select>`:''}
@@ -1170,7 +1261,7 @@ async function renderTeacher(){
       <div class="sub">Word Lab · Grade 8 AI Unit · ${vp.email||''}</div>
       <div class="stats">
         <div class="stat"><b>★ ${vp.points||0}</b><span>points</span></div>
-        <div class="stat"><b>${(vp.done||[]).length}/${LEVELS.length}</b><span>levels done</span></div>
+        <div class="stat"><b>${(vp.done||[]).length}/${LEVELS.length}</b><span>lessons done</span></div>
         <div class="stat"><b>${acc}%</b><span>right first try</span></div>
       </div>
       <div class="stats" style="grid-template-columns:1fr">
@@ -1190,13 +1281,13 @@ async function renderTeacher(){
       </div>
     </div>
     <div class="act">
-      <button class="key btn ghost" id="unlock" style="flex:1">Unlock all levels</button>
+      <button class="key btn ghost" id="unlock" style="flex:1">Unlock all lessons</button>
       <button class="key btn ghost" id="reset" style="flex:1">Reset ${vp.name}'s progress</button>
     </div>
-    <button class="key btn ghost" id="tsignout" style="width:100%;margin-top:.8rem">Sign out</button>`;
+    ${teacherFooterHTML()}`;
   $('#pswitch')?.addEventListener('change', e=>{ teacherViewing=e.target.value; renderTeacher(); });
   $('#trefresh').onclick=renderTeacher;
-  $('#tsignout').onclick=()=>window.WordLabFB.signOut();
+  bindTeacherFooter();
   $('#unlock').onclick=async()=>{
     const {id, ...rest} = vp;
     const updated={...rest, done:LEVELS.map(l=>l.n)};
