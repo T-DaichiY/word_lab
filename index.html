@@ -303,16 +303,24 @@ input.typed:focus{border-color:var(--accent);outline:none}
 .streak-badge.bump{transform:scale(1.22)}
 @media (prefers-reduced-motion:reduce){.streak-badge{transition:none}.streak-badge.bump{transform:none}}
 
-/* ---------- avatars ---------- */
-.avatar-btn{flex:none;width:62px;height:62px;border-radius:14px;font-size:2.1rem;
-  background:linear-gradient(145deg,var(--accent),var(--accent-2));
+/* ---------- avatars (blocky/voxel style — square pixel-art frame, not any copyrighted mob art) ---------- */
+.avatar-btn{flex:none;width:62px;height:62px;border-radius:4px;font-size:2.1rem;position:relative;
+  background:linear-gradient(145deg,var(--accent),var(--accent-2));image-rendering:pixelated;
   display:flex;align-items:center;justify-content:center;line-height:1;
-  box-shadow:0 3px 0 var(--accent-deep,rgba(0,0,0,.35))}
-.avatar-picker{display:none;flex-wrap:wrap;gap:.5rem;margin-top:.8rem;padding-top:.8rem;border-top:1.5px dashed var(--edge)}
+  border:2px solid rgba(0,0,0,.35);
+  box-shadow:inset 3px 3px 0 rgba(255,255,255,.25), inset -3px -3px 0 rgba(0,0,0,.25), 0 3px 0 var(--accent-deep,rgba(0,0,0,.35))}
+.weapon-badge{position:absolute;right:-6px;bottom:-6px;width:26px;height:26px;border-radius:3px;font-size:15px;
+  background:var(--surface);border:2px solid var(--ink);display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 0 rgba(0,0,0,.35)}
+.avatar-picker{display:none;flex-direction:column;gap:.6rem;margin-top:.8rem;padding-top:.8rem;border-top:1.5px dashed var(--edge)}
 .avatar-picker.on{display:flex}
-.ava-opt{width:48px;height:48px;border-radius:10px;font-size:1.5rem;flex:none;
+.ava-picker-label{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--ink3);font-weight:700}
+.ava-picker-row{display:flex;flex-wrap:wrap;gap:.5rem}
+.ava-opt{width:44px;height:44px;border-radius:4px;font-size:1.4rem;flex:none;image-rendering:pixelated;
   display:flex;align-items:center;justify-content:center;background:var(--sunk);
-  border:2px solid var(--edge);position:relative}
+  border:2px solid rgba(0,0,0,.3);position:relative;
+  box-shadow:inset 2px 2px 0 rgba(255,255,255,.18), inset -2px -2px 0 rgba(0,0,0,.18)}
 .ava-opt.cur{border-color:var(--accent);background:var(--accent-soft)}
 .ava-opt.locked{opacity:.35;filter:grayscale(1)}
 .ava-opt .lock{position:absolute;bottom:-4px;right:-4px;font-size:11px}
@@ -894,13 +902,14 @@ renderLangToggle();
 const TEACHER_EMAIL = 'daichi.yamamoto@sisbschool.com';
 function blankProfile(name, email){
   return {name, email, done:[], stats:{}, sents:[], first:{r:0,t:0}, points:0, seenWords:{},
-    streak:0, lastPlayDate:null, avatar:'fox', unlocked:['fox']};
+    streak:0, lastPlayDate:null, avatar:'fox', unlocked:['fox'], weapon:'none', unlockedWeapons:['none']};
 }
 function fillProfileDefaults(){
   if(!P.stats) P.stats={}; if(typeof P.points!=='number') P.points=0; if(!P.seenWords) P.seenWords={};
   if(!P.done) P.done=[]; if(!P.sents) P.sents=[]; if(!P.first) P.first={r:0,t:0};
   if(typeof P.streak!=='number') P.streak=0; if(!P.lastPlayDate) P.lastPlayDate=null;
   if(!P.avatar) P.avatar='fox'; if(!P.unlocked) P.unlocked=['fox'];
+  if(!P.weapon) P.weapon='none'; if(!P.unlockedWeapons) P.unlockedWeapons=['none'];
 }
 let uid=null, userEmail=null, isTeacher=false;
 /* Guest mode: no Google account, no Firestore — progress lives only on this device.
@@ -967,19 +976,33 @@ function addPoints(n, why){
   setTimeout(checkUnlocks, 2400);
 }
 
-/* ---------------- daily streak + unlockable avatars ---------------- */
+/* ---------------- daily streak + unlockable blocky avatars & weapons ----------------
+   Voxel/pixel-art FRAME (square, beveled box-shadow) + generic mob/gear emoji — evokes the
+   blocky-game look the teacher asked for without reproducing any specific copyrighted
+   character skin (Steve/Creeper textures etc. stay out of it), so ids/labels below are
+   original ("Miner", "Golem"...) even where the emoji is a stand-in for a recognizable mob. */
 const AVATARS = [
-  {id:'fox',     emoji:'🦊', label:'Fox',     cond:null},
-  {id:'cat',     emoji:'🐱', label:'Cat',     cond:{type:'points', n:60}},
-  {id:'flame',   emoji:'🔥', label:'Flame',   cond:{type:'streak', n:3}},
-  {id:'owl',     emoji:'🦉', label:'Owl',     cond:{type:'points', n:240}},
-  {id:'panda',   emoji:'🐼', label:'Panda',   cond:{type:'streak', n:7}},
-  {id:'dragon',  emoji:'🐉', label:'Dragon',  cond:{type:'points', n:660}},
-  {id:'unicorn', emoji:'🦄', label:'Unicorn', cond:{type:'points', n:1260}},
-  {id:'trophy',  emoji:'🏆', label:'Trophy',  cond:{type:'points', n:1800}},
+  {id:'fox',     emoji:'🧑‍🌾', label:'Miner',  cond:null},
+  {id:'cat',     emoji:'🐷',        label:'Pig',    cond:{type:'points', n:60}},
+  {id:'flame',   emoji:'🐺',        label:'Wolf',   cond:{type:'streak', n:3}},
+  {id:'owl',     emoji:'🐮',        label:'Cow',    cond:{type:'points', n:240}},
+  {id:'panda',   emoji:'🧟',        label:'Zombie', cond:{type:'streak', n:7}},
+  {id:'dragon',  emoji:'🐲',        label:'Dragon', cond:{type:'points', n:660}},
+  {id:'unicorn', emoji:'💎',        label:'Golem',  cond:{type:'points', n:1260}},
+  {id:'trophy',  emoji:'👑',        label:'Champion', cond:{type:'points', n:1800}},
 ];
-function avatarUnlocked(a){ return !a.cond || (a.cond.type==='points' ? (P.points||0)>=a.cond.n : (P.streak||0)>=a.cond.n); }
+const WEAPONS = [
+  {id:'none',    emoji:'',   label:'None',     cond:null},
+  {id:'sword',   emoji:'⚔️', label:'Sword',    cond:{type:'points', n:100}},
+  {id:'shield',  emoji:'🛡️', label:'Shield',   cond:{type:'streak', n:3}},
+  {id:'bow',     emoji:'🏹', label:'Bow',      cond:{type:'points', n:400}},
+  {id:'axe',     emoji:'🪓', label:'Axe',      cond:{type:'streak', n:10}},
+  {id:'pick',    emoji:'⛏️', label:'Pickaxe',  cond:{type:'points', n:800}},
+  {id:'potion',  emoji:'🧪', label:'Potion',   cond:{type:'points', n:1500}},
+];
+function itemUnlocked(a){ return !a.cond || (a.cond.type==='points' ? (P.points||0)>=a.cond.n : (P.streak||0)>=a.cond.n); }
 function currentAvatarEmoji(){ return (AVATARS.find(a=>a.id===P.avatar)||AVATARS[0]).emoji; }
+function currentWeaponEmoji(){ return (WEAPONS.find(w=>w.id===P.weapon)||WEAPONS[0]).emoji; }
 function todayStr(){ return new Date().toISOString().slice(0,10); }
 function touchStreak(){
   const today = todayStr();
@@ -999,15 +1022,18 @@ function updateStreakBadge(){
 function checkUnlocks(){
   let gained=null;
   AVATARS.forEach(a=>{
-    if(!P.unlocked.includes(a.id) && avatarUnlocked(a)){ P.unlocked.push(a.id); gained=a; }
+    if(!P.unlocked.includes(a.id) && itemUnlocked(a)){ P.unlocked.push(a.id); gained=a; }
   });
-  if(gained){ save(); showAvatarUnlockToast(gained); }
+  WEAPONS.forEach(w=>{
+    if(!P.unlockedWeapons.includes(w.id) && itemUnlocked(w)){ P.unlockedWeapons.push(w.id); gained=gained||w; }
+  });
+  if(gained){ save(); showUnlockToast(gained); }
 }
-function showAvatarUnlockToast(a){
+function showUnlockToast(item){
   const el=$('#ptoast');
   if(!el) return;
   clearTimeout(pointsFloat);
-  el.innerHTML = `<span style="font-size:.65em;opacity:.85">NEW AVATAR</span><br>${a.emoji} ${a.label}`;
+  el.innerHTML = `<span style="font-size:.65em;opacity:.85">NEW ITEM</span><br>${item.emoji} ${item.label}`;
   el.classList.add('big');
   el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
   pointsFloat=setTimeout(()=>{ el.classList.remove('show'); el.classList.remove('big'); },2200);
@@ -1238,7 +1264,7 @@ function identityBlockHTML(){
     const into = nx ? Math.min(100, Math.round(100*((P.points||0)-rk.min)/span)) : 100;
     return `
       <div class="scoreline">
-        <button class="avatar-btn" id="avabtn" title="Change avatar">${currentAvatarEmoji()}</button>
+        <button class="avatar-btn" id="avabtn" title="Change avatar / weapon">${currentAvatarEmoji()}${P.weapon!=='none'?`<span class="weapon-badge">${currentWeaponEmoji()}</span>`:''}</button>
         <div class="lv-badge"><span class="lv-num">${rk.lv}</span><span class="lv-cap">LEVEL</span></div>
         <div class="score-main">
           <div class="score-pts"><span class="star">★</span>${P.points||0}<span class="pts-cap">points</span></div>
@@ -1250,13 +1276,30 @@ function identityBlockHTML(){
       <div style="font-size:11.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace">${nx ? (nx.min-(P.points||0))+' points → Lv '+nx.lv+' '+nx.en : '🏆 Top level reached'}</div>
       ${P.streak>0?`<div style="font-size:11.5px;color:#ff8a33;font-weight:700;margin-top:.5rem">🔥 ${P.streak}-day streak — ${pick('保持下去！','ทำต่อไปนะ!')}</div>`:''}
       <div class="avatar-picker" id="avapicker">
-        ${AVATARS.map(a=>{
-          const unlocked = P.unlocked.includes(a.id);
-          const cur = P.avatar===a.id;
-          const hint = a.cond ? (a.cond.type==='points' ? a.cond.n+' pts' : a.cond.n+'-day streak') : '';
-          return `<button class="ava-opt ${cur?'cur':''} ${unlocked?'':'locked'}" data-ava="${a.id}"
-            ${unlocked?'':'disabled'} title="${unlocked?a.label:a.label+' — '+hint+' to unlock'}">${a.emoji}${unlocked?'':'<span class=\"lock\">🔒</span>'}</button>`;
-        }).join('')}
+        <div>
+          <div class="ava-picker-label">Character</div>
+          <div class="ava-picker-row">
+            ${AVATARS.map(a=>{
+              const unlocked = P.unlocked.includes(a.id);
+              const cur = P.avatar===a.id;
+              const hint = a.cond ? (a.cond.type==='points' ? a.cond.n+' pts' : a.cond.n+'-day streak') : '';
+              return `<button class="ava-opt ${cur?'cur':''} ${unlocked?'':'locked'}" data-ava="${a.id}"
+                ${unlocked?'':'disabled'} title="${unlocked?a.label:a.label+' — '+hint+' to unlock'}">${a.emoji}${unlocked?'':'<span class=\"lock\">🔒</span>'}</button>`;
+            }).join('')}
+          </div>
+        </div>
+        <div>
+          <div class="ava-picker-label">Weapon</div>
+          <div class="ava-picker-row">
+            ${WEAPONS.map(w=>{
+              const unlocked = P.unlockedWeapons.includes(w.id);
+              const cur = P.weapon===w.id;
+              const hint = w.cond ? (w.cond.type==='points' ? w.cond.n+' pts' : w.cond.n+'-day streak') : '';
+              return `<button class="ava-opt ${cur?'cur':''} ${unlocked?'':'locked'}" data-wpn="${w.id}"
+                ${unlocked?'':'disabled'} title="${unlocked?w.label:w.label+' — '+hint+' to unlock'}">${w.emoji||'∅'}${unlocked?'':'<span class=\"lock\">🔒</span>'}</button>`;
+            }).join('')}
+          </div>
+        </div>
       </div>
       ${isGuest?`<div style="font-size:11.5px;color:var(--gloss);font-weight:600;margin-top:.7rem">👤 Playing as guest — progress saved on this device only. ${pick('以访客身份游玩——进度只保存在这台设备上。','เล่นแบบผู้เยี่ยมชม—ความคืบหน้าจะบันทึกไว้บนอุปกรณ์นี้เท่านั้น')}</div>`:''}
       ${isTeacher?`<button class="key btn ghost" id="toteacher" style="width:100%;margin-top:.9rem">📋 Teacher report →</button>`:''}`;
@@ -1364,6 +1407,9 @@ function renderHome(){
   $('#avabtn')?.addEventListener('click',()=>{ $('#avapicker')?.classList.toggle('on'); });
   $('#avapicker')?.querySelectorAll('[data-ava]').forEach(b=>b.addEventListener('click',()=>{
     P.avatar = b.dataset.ava; save(); renderHome();
+  }));
+  $('#avapicker')?.querySelectorAll('[data-wpn]').forEach(b=>b.addEventListener('click',()=>{
+    P.weapon = b.dataset.wpn; save(); renderHome();
   }));
   $('#v-home').querySelectorAll('[data-lv]').forEach(b=>b.onclick=()=>startLevel(+b.dataset.lv));
 }
