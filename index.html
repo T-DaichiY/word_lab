@@ -297,6 +297,25 @@ input.typed:focus{border-color:var(--accent);outline:none}
   border-radius:9px;font-variant-numeric:tabular-nums;transition:transform .18s cubic-bezier(.3,1.6,.5,1)}
 .badge-pts.bump{transform:scale(1.22)}
 @media (prefers-reduced-motion:reduce){.badge-pts{transition:none}.badge-pts.bump{transform:none}}
+.streak-badge{flex:none;font-family:'JetBrains Mono',monospace;font-weight:800;font-size:15px;
+  padding:.5rem .7rem;background:#ff8a3315;border:2px solid #ff8a33;color:#ff8a33;
+  border-radius:9px;font-variant-numeric:tabular-nums;transition:transform .18s cubic-bezier(.3,1.6,.5,1)}
+.streak-badge.bump{transform:scale(1.22)}
+@media (prefers-reduced-motion:reduce){.streak-badge{transition:none}.streak-badge.bump{transform:none}}
+
+/* ---------- avatars ---------- */
+.avatar-btn{flex:none;width:62px;height:62px;border-radius:14px;font-size:2.1rem;
+  background:linear-gradient(145deg,var(--accent),var(--accent-2));
+  display:flex;align-items:center;justify-content:center;line-height:1;
+  box-shadow:0 3px 0 var(--accent-deep,rgba(0,0,0,.35))}
+.avatar-picker{display:none;flex-wrap:wrap;gap:.5rem;margin-top:.8rem;padding-top:.8rem;border-top:1.5px dashed var(--edge)}
+.avatar-picker.on{display:flex}
+.ava-opt{width:48px;height:48px;border-radius:10px;font-size:1.5rem;flex:none;
+  display:flex;align-items:center;justify-content:center;background:var(--sunk);
+  border:2px solid var(--edge);position:relative}
+.ava-opt.cur{border-color:var(--accent);background:var(--accent-soft)}
+.ava-opt.locked{opacity:.35;filter:grayscale(1)}
+.ava-opt .lock{position:absolute;bottom:-4px;right:-4px;font-size:11px}
 .langtoggle{flex:none;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:12.5px;
   padding:.4rem .7rem;background:var(--gloss-soft);border:1.5px solid var(--gloss);color:var(--gloss);
   border-radius:8px;white-space:nowrap}
@@ -468,6 +487,7 @@ input.typed:focus{border-color:var(--accent);outline:none}
       <div class="bar-lv" id="barlv">Word Lab</div>
       <div class="bar-name" id="barname">English first</div>
     </div>
+    <button class="streak-badge" id="streakbadge" hidden></button>
     <button class="badge-pts" id="ptsbadge" hidden></button>
     <button class="langtoggle" id="langtoggle" type="button"></button>
     <button class="mini" id="repeat" style="flex:none;width:52px;height:44px;font-size:19px" hidden>🔊</button>
@@ -873,7 +893,14 @@ renderLangToggle();
 /* ---------------- identity (Firebase Auth + Firestore — cross-device) ---------------- */
 const TEACHER_EMAIL = 'daichi.yamamoto@sisbschool.com';
 function blankProfile(name, email){
-  return {name, email, done:[], stats:{}, sents:[], first:{r:0,t:0}, points:0, seenWords:{}};
+  return {name, email, done:[], stats:{}, sents:[], first:{r:0,t:0}, points:0, seenWords:{},
+    streak:0, lastPlayDate:null, avatar:'fox', unlocked:['fox']};
+}
+function fillProfileDefaults(){
+  if(!P.stats) P.stats={}; if(typeof P.points!=='number') P.points=0; if(!P.seenWords) P.seenWords={};
+  if(!P.done) P.done=[]; if(!P.sents) P.sents=[]; if(!P.first) P.first={r:0,t:0};
+  if(typeof P.streak!=='number') P.streak=0; if(!P.lastPlayDate) P.lastPlayDate=null;
+  if(!P.avatar) P.avatar='fox'; if(!P.unlocked) P.unlocked=['fox'];
 }
 let uid=null, userEmail=null, isTeacher=false;
 /* Guest mode: no Google account, no Firestore — progress lives only on this device.
@@ -899,8 +926,8 @@ function flushSave(){
 function startGuest(){
   isGuest=true; uid=null; userEmail=null; isTeacher=false; authError=null; authLoading=false;
   P = store.get('guestProfile', null) || blankProfile('Guest','');
-  if(!P.stats) P.stats={}; if(typeof P.points!=='number') P.points=0; if(!P.seenWords) P.seenWords={};
-  if(!P.done) P.done=[]; if(!P.sents) P.sents=[]; if(!P.first) P.first={r:0,t:0};
+  fillProfileDefaults();
+  touchStreak();
   renderHome(); show('home'); setBar('Word Lab', barTagline());
 }
 window.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') flushSave(); });
@@ -936,6 +963,54 @@ function addPoints(n, why){
   bumpPtsBadge();
   if(after>before) showLevelUp(rankFor(P.points));
   else showPointsToast(n);
+  /* Delayed so it doesn't stomp the points/level-up toast that's already showing on #ptoast. */
+  setTimeout(checkUnlocks, 2400);
+}
+
+/* ---------------- daily streak + unlockable avatars ---------------- */
+const AVATARS = [
+  {id:'fox',     emoji:'🦊', label:'Fox',     cond:null},
+  {id:'cat',     emoji:'🐱', label:'Cat',     cond:{type:'points', n:60}},
+  {id:'flame',   emoji:'🔥', label:'Flame',   cond:{type:'streak', n:3}},
+  {id:'owl',     emoji:'🦉', label:'Owl',     cond:{type:'points', n:240}},
+  {id:'panda',   emoji:'🐼', label:'Panda',   cond:{type:'streak', n:7}},
+  {id:'dragon',  emoji:'🐉', label:'Dragon',  cond:{type:'points', n:660}},
+  {id:'unicorn', emoji:'🦄', label:'Unicorn', cond:{type:'points', n:1260}},
+  {id:'trophy',  emoji:'🏆', label:'Trophy',  cond:{type:'points', n:1800}},
+];
+function avatarUnlocked(a){ return !a.cond || (a.cond.type==='points' ? (P.points||0)>=a.cond.n : (P.streak||0)>=a.cond.n); }
+function currentAvatarEmoji(){ return (AVATARS.find(a=>a.id===P.avatar)||AVATARS[0]).emoji; }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function touchStreak(){
+  const today = todayStr();
+  if(P.lastPlayDate === today) { updateStreakBadge(); return; }
+  const yesterday = new Date(Date.now()-86400000).toISOString().slice(0,10);
+  P.streak = (P.lastPlayDate === yesterday) ? (P.streak||0)+1 : 1;
+  P.lastPlayDate = today;
+  save();
+  updateStreakBadge();
+  checkUnlocks();
+}
+function updateStreakBadge(){
+  const el=$('#streakbadge'); if(!el) return;
+  el.hidden = !canPlay() || !(P.streak>0);
+  if(!el.hidden) el.textContent = '🔥'+P.streak;
+}
+function checkUnlocks(){
+  let gained=null;
+  AVATARS.forEach(a=>{
+    if(!P.unlocked.includes(a.id) && avatarUnlocked(a)){ P.unlocked.push(a.id); gained=a; }
+  });
+  if(gained){ save(); showAvatarUnlockToast(gained); }
+}
+function showAvatarUnlockToast(a){
+  const el=$('#ptoast');
+  if(!el) return;
+  clearTimeout(pointsFloat);
+  el.innerHTML = `<span style="font-size:.65em;opacity:.85">NEW AVATAR</span><br>${a.emoji} ${a.label}`;
+  el.classList.add('big');
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  pointsFloat=setTimeout(()=>{ el.classList.remove('show'); el.classList.remove('big'); },2200);
 }
 function bumpPtsBadge(){
   const el=$('#ptsbadge'); if(!el) return;
@@ -1082,6 +1157,7 @@ function show(v){
   $('#repeat').hidden = (v!=='task');
   $('#ptsbadge').hidden = !canPlay();
   updatePtsBadge();
+  updateStreakBadge();
   window.scrollTo(0,0);
 }
 function updatePtsBadge(){ if(canPlay()) $('#ptsbadge').textContent = 'Lv'+rankFor(P.points||0).lv+' · ★'+(P.points||0); }
@@ -1140,8 +1216,8 @@ window.onWordLabAuth = async function(authState){
     let data = await window.WordLabFB.loadStudent(uid);
     if(!data){ data = blankProfile(authState.name, userEmail); await window.WordLabFB.saveStudent(uid, data); }
     P = data;
-    if(!P.stats) P.stats={}; if(typeof P.points!=='number') P.points=0; if(!P.seenWords) P.seenWords={};
-    if(!P.done) P.done=[]; if(!P.sents) P.sents=[]; if(!P.first) P.first={r:0,t:0};
+    fillProfileDefaults();
+    touchStreak();
     authLoading=false;
   }catch(e){
     console.error('load failed', e);
@@ -1162,6 +1238,7 @@ function identityBlockHTML(){
     const into = nx ? Math.min(100, Math.round(100*((P.points||0)-rk.min)/span)) : 100;
     return `
       <div class="scoreline">
+        <button class="avatar-btn" id="avabtn" title="Change avatar">${currentAvatarEmoji()}</button>
         <div class="lv-badge"><span class="lv-num">${rk.lv}</span><span class="lv-cap">LEVEL</span></div>
         <div class="score-main">
           <div class="score-pts"><span class="star">★</span>${P.points||0}<span class="pts-cap">points</span></div>
@@ -1171,6 +1248,16 @@ function identityBlockHTML(){
       </div>
       <div class="ptsbar"><i style="width:${into}%"></i></div>
       <div style="font-size:11.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace">${nx ? (nx.min-(P.points||0))+' points → Lv '+nx.lv+' '+nx.en : '🏆 Top level reached'}</div>
+      ${P.streak>0?`<div style="font-size:11.5px;color:#ff8a33;font-weight:700;margin-top:.5rem">🔥 ${P.streak}-day streak — ${pick('保持下去！','ทำต่อไปนะ!')}</div>`:''}
+      <div class="avatar-picker" id="avapicker">
+        ${AVATARS.map(a=>{
+          const unlocked = P.unlocked.includes(a.id);
+          const cur = P.avatar===a.id;
+          const hint = a.cond ? (a.cond.type==='points' ? a.cond.n+' pts' : a.cond.n+'-day streak') : '';
+          return `<button class="ava-opt ${cur?'cur':''} ${unlocked?'':'locked'}" data-ava="${a.id}"
+            ${unlocked?'':'disabled'} title="${unlocked?a.label:a.label+' — '+hint+' to unlock'}">${a.emoji}${unlocked?'':'<span class=\"lock\">🔒</span>'}</button>`;
+        }).join('')}
+      </div>
       ${isGuest?`<div style="font-size:11.5px;color:var(--gloss);font-weight:600;margin-top:.7rem">👤 Playing as guest — progress saved on this device only. ${pick('以访客身份游玩——进度只保存在这台设备上。','เล่นแบบผู้เยี่ยมชม—ความคืบหน้าจะบันทึกไว้บนอุปกรณ์นี้เท่านั้น')}</div>`:''}
       ${isTeacher?`<button class="key btn ghost" id="toteacher" style="width:100%;margin-top:.9rem">📋 Teacher report →</button>`:''}`;
   }
@@ -1274,6 +1361,10 @@ function renderHome(){
   });
   $('#playguest')?.addEventListener('click', startGuest);
   $('#toteacher')?.addEventListener('click',()=>{ show('teacher'); setBar('Report','For the teacher'); renderTeacher(); });
+  $('#avabtn')?.addEventListener('click',()=>{ $('#avapicker')?.classList.toggle('on'); });
+  $('#avapicker')?.querySelectorAll('[data-ava]').forEach(b=>b.addEventListener('click',()=>{
+    P.avatar = b.dataset.ava; save(); renderHome();
+  }));
   $('#v-home').querySelectorAll('[data-lv]').forEach(b=>b.onclick=()=>startLevel(+b.dataset.lv));
 }
 
