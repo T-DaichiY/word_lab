@@ -54,6 +54,20 @@
   --glass-bg:rgba(255,255,255,.055); --glass-border:rgba(255,255,255,.11); --blur:20px;
   --aurora-a:rgba(255,143,201,.20); --aurora-b:rgba(201,139,255,.18);
 }
+/* Explicit override so a student can force Light even when their device/browser
+   prefers dark — same values as the default :root above, just re-stated so the
+   [data-theme="light"] attribute (set by the sun/moon toggle) always wins. */
+:root[data-theme="light"]{
+  --ground:#eceef2; --surface:#ffffff; --sunk:#e2e6ee; --edge:#c8cfdb; --edge2:#aab4c6;
+  --ink:#151a22; --ink2:#4c5666; --ink3:#7b8698;
+  --accent:#a3267d; --accent-2:#7c3aed; --accent-ink:#ffffff; --accent-soft:#f9e0f0;
+  --gloss:#e64980; --gloss-soft:#fde3ec;
+  --yes:#17703f; --yes-soft:#dcf0e4;
+  --retry:#9a5b06; --retry-soft:#fbeeda;
+  --key-drop:#b9c2d1;
+  --glass-bg:var(--surface); --glass-border:var(--edge); --blur:0px;
+  --aurora-a:transparent; --aurora-b:transparent;
+}
 
 *{box-sizing:border-box}
 body{margin:0;background:var(--ground);color:var(--ink);position:relative;
@@ -498,6 +512,7 @@ input.typed:focus{border-color:var(--accent);outline:none}
     <button class="streak-badge" id="streakbadge" hidden></button>
     <button class="badge-pts" id="ptsbadge" hidden></button>
     <button class="langtoggle" id="langtoggle" type="button"></button>
+    <button class="langtoggle" id="themetoggle" type="button" title="Switch light/dark"></button>
     <button class="mini" id="repeat" style="flex:none;width:52px;height:44px;font-size:19px" hidden>🔊</button>
   </div>
   <div class="rail" id="rail" hidden></div>
@@ -897,6 +912,30 @@ $('#langtoggle').addEventListener('click',()=>{
   else if(view==='task') renderItem();
 });
 renderLangToggle();
+
+/* ---------------- light/dark toggle: null = follow the device's own setting ---------------- */
+let THEME = store.get('theme', null);
+function systemPrefersDark(){ return window.matchMedia && window.matchMedia('(prefers-color-scheme:dark)').matches; }
+function effectiveTheme(){ return THEME || (systemPrefersDark() ? 'dark' : 'light'); }
+function applyTheme(){
+  if(THEME) document.documentElement.dataset.theme = THEME;
+  else delete document.documentElement.dataset.theme;
+}
+function renderThemeToggle(){
+  const btn = $('#themetoggle');
+  /* Shows the theme you'll SWITCH TO, not the one currently active. */
+  const goingTo = effectiveTheme()==='dark' ? 'light' : 'dark';
+  btn.textContent = goingTo==='dark' ? '🌙 Dark' : '☀️ Light';
+  btn.title = 'Switch to '+goingTo+' theme';
+}
+$('#themetoggle').addEventListener('click',()=>{
+  THEME = effectiveTheme()==='dark' ? 'light' : 'dark';
+  store.set('theme', THEME);
+  applyTheme();
+  renderThemeToggle();
+});
+applyTheme();
+renderThemeToggle();
 
 /* ---------------- identity (Firebase Auth + Firestore — cross-device) ---------------- */
 const TEACHER_EMAIL = 'daichi.yamamoto@sisbschool.com';
