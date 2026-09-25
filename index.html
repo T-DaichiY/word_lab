@@ -3,7 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<!-- CSP is set via real HTTP headers in firebase.json (Firebase Hosting), not this meta tag. -->
+<!-- ═══ SECURITY: Content Security Policy ═══════════════════════════════════
+     This file is served from two places:
+       1. Firebase Hosting (word-lab-g8-2627.web.app) — locked down via real
+          HTTP headers in firebase.json. Those headers win there; this meta
+          tag is redundant on that host but harmless (same policy).
+       2. GitHub Pages (t-daichiy.github.io/word_lab) — GitHub Pages cannot
+          serve custom HTTP headers, so this <meta> tag is the ONLY CSP that
+          host gets. Keep it in sync with firebase.json's policy by hand.
+     Note: frame-ancestors is ignored in a <meta> CSP, so clickjacking
+     protection is only available on the Firebase-hosted copy.               -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.googleusercontent.com; connect-src 'self' https://*.googleapis.com https://*.google.com https://*.gstatic.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebaseapp.com; frame-src https://word-lab-g8-2627.firebaseapp.com https://accounts.google.com https://apis.google.com; base-uri 'none'; form-action 'self' https://accounts.google.com https://word-lab-g8-2627.firebaseapp.com; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Word Lab</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
@@ -111,6 +121,13 @@ main{max-width:640px;margin:0 auto;padding:1.1rem 1rem 6rem}
 .hero p{margin:0;color:var(--ink2);font-size:1.05rem;max-width:34ch}
 .hero .zh{color:var(--gloss);font-size:.98rem;margin-top:.4rem}
 
+.weektabs{display:flex;gap:.5rem;margin-bottom:.9rem}
+.weektab{flex:1;padding:.6rem .5rem;text-align:center;border-radius:var(--r)}
+.weektab b{display:block;font-size:.88rem}
+.weektab span{display:block;font-size:10.5px;color:var(--ink3);margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.weektab.on{border-color:var(--accent);background:var(--accent-soft)}
+.weektab.on b{color:var(--accent)}
 .ladder{display:flex;flex-direction:column;gap:.55rem;margin-bottom:1.5rem}
 .lv{display:flex;align-items:center;gap:.9rem;padding:.85rem .95rem;text-align:left;width:100%}
 .lv-n{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.05rem;width:38px;height:38px;flex:none;
@@ -275,9 +292,11 @@ input.typed:focus{border-color:var(--accent);outline:none}
 #stopaudio.on{display:block}
 
 /* ---------- points ---------- */
-.badge-pts{flex:none;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;
-  padding:.4rem .65rem;background:var(--accent-soft);border:1.5px solid var(--accent);color:var(--accent);
-  border-radius:8px;font-variant-numeric:tabular-nums}
+.badge-pts{flex:none;font-family:'JetBrains Mono',monospace;font-weight:800;font-size:16.5px;
+  padding:.5rem .8rem;background:var(--accent-soft);border:2px solid var(--accent);color:var(--accent);
+  border-radius:9px;font-variant-numeric:tabular-nums;transition:transform .18s cubic-bezier(.3,1.6,.5,1)}
+.badge-pts.bump{transform:scale(1.22)}
+@media (prefers-reduced-motion:reduce){.badge-pts{transition:none}.badge-pts.bump{transform:none}}
 .langtoggle{flex:none;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:12.5px;
   padding:.4rem .7rem;background:var(--gloss-soft);border:1.5px solid var(--gloss);color:var(--gloss);
   border-radius:8px;white-space:nowrap}
@@ -534,59 +553,244 @@ const W = {
   face:{zh:'脸', th:'ใบหน้า', e:'🙂'},
   movie:{zh:'电影', th:'ภาพยนตร์', e:'🎬'},
   your:{zh:'你的', th:'ของคุณ', glue:1},
+  /* ── Week 3: Machine Learning & LLMs ── */
+  /* L10 — the machine learns from data */
+  machine:{zh:'机器', th:'เครื่องจักร', e:'🦾'},
+  data:{zh:'数据', th:'ข้อมูล', e:'📊'},
+  pattern:{zh:'规律', th:'รูปแบบ', d:'pattern'},
+  teach:{zh:'教', th:'สอน', e:'🍎'},
+  for:{zh:'为了', th:'สำหรับ', glue:1},
+  /* L11 — a dataset is many examples */
+  dataset:{zh:'数据集', th:'ชุดข้อมูล', e:'🗂️'},
+  model:{zh:'模型', th:'โมเดล', e:'🧠'},
+  /* L12 — AI reads language */
+  language:{zh:'语言', th:'ภาษา', e:'🔤'},
+  large:{zh:'大的', th:'ใหญ่', e:'🐘'},
+  read:{zh:'读', th:'อ่าน', e:'👓'},
+  /* L13 — small pieces called tokens */
+  break:{zh:'分开', th:'แบ่ง', d:'break'},
+  piece:{zh:'一片', th:'ชิ้นส่วน', e:'🧩'},
+  small:{zh:'小的', th:'เล็ก', e:'🐜'},
+  token:{zh:'词元', th:'โทเคน', e:'🔖'},
+  into:{zh:'进入', th:'เข้าไปใน', glue:1},
+  /* L14 — build new words from pieces */
+  un:{zh:'不（前缀）', th:'ไม่ (คำนำหน้า)', e:'🚫'},
+  re:{zh:'再（前缀）', th:'อีกครั้ง (คำนำหน้า)', e:'🔂'},
+  ing:{zh:'正在（词尾）', th:'กำลัง (คำลงท้าย)', e:'⏳'},
+  ly:{zh:'…地（词尾）', th:'อย่าง... (คำลงท้าย)', e:'➡️'},
+  happy:{zh:'开心', th:'มีความสุข', e:'😊'},
+  /* Advanced tier only — two connector words that make 3-clause sentences possible */
+  but:{zh:'但是', th:'แต่', glue:1},
+  because:{zh:'因为', th:'เพราะ', glue:1},
 };
 
 const LEVELS = [
-  {n:1, title:'Words for this app', zh:'这个应用的词', th:'คำศัพท์สำหรับแอปนี้',
+  {n:1, week:1, tier:'easy', title:'Words for this app', zh:'这个应用的词', th:'คำศัพท์สำหรับแอปนี้',
    words:['listen','type','choose','again','next','right','wrong'],
    glue:['it','is','and'], chunks:[],
    sentences:['Listen and choose.','Type it again.','It is right.','It is wrong.']},
 
-  {n:2, title:'Things on a screen', zh:'屏幕上的东西', th:'สิ่งของบนหน้าจอ',
+  {n:2, week:1, tier:'easy', title:'Things on a screen', zh:'屏幕上的东西', th:'สิ่งของบนหน้าจอ',
    words:['word','picture','name','phone','screen','computer'],
    glue:['a','the','this'], chunks:[],
    sentences:['This is a phone.','This is a computer.','Choose the picture.','Type the word.']},
 
-  {n:3, title:'Is / is not', zh:'是 / 不是', th:'ใช่ / ไม่ใช่',
+  {n:3, week:1, tier:'easy', title:'Is / is not', zh:'是 / 不是', th:'ใช่ / ไม่ใช่',
    words:['not','yes','no','same','different','robot'],
    glue:[], chunks:[],
    sentences:['This is a robot.','A robot is not a phone.','This is not the same.','It is different.']},
 
-  {n:4, title:'People do things', zh:'人做事情', th:'คนทำสิ่งต่างๆ',
+  {n:4, week:1, tier:'easy', title:'People do things', zh:'人做事情', th:'คนทำสิ่งต่างๆ',
    words:['I','you','person','make','use','help'],
    glue:[], chunks:[],
    sentences:['I use a computer.','I make a picture.','You use a phone.','I help you.']},
 
-  {n:5, title:'AI is software', zh:'AI 是软件', th:'เอไอคือซอฟต์แวร์',
+  {n:5, week:1, tier:'easy', title:'AI is software', zh:'AI 是软件', th:'เอไอคือซอฟต์แวร์',
    words:['AI','software','new','ask','work'],
    glue:['can'], chunks:[],
    labels:[['Generative AI','生成式人工智能','เจนเนอเรทีฟเอไอ (ปัญญาประดิษฐ์เชิงสร้างสรรค์)']],
    sentences:['AI is software.','AI is not a robot.','AI can make a new picture.','You can ask AI.']},
 
-  {n:6, title:'Many examples', zh:'很多例子', th:'ตัวอย่างมากมาย',
+  {n:6, week:1, tier:'easy', title:'Many examples', zh:'很多例子', th:'ตัวอย่างมากมาย',
    words:['many','example','learn','look','thing'],
    glue:['from','at'], chunks:[],
    note:{en:'One more thing: many words + s', zh:'还有一件事：很多单词后面加 s', th:'อีกอย่างหนึ่ง: คำหลายคำเติม s', ex:['example → examples','learn → learns','picture → pictures']},
    labels:[['Machine Learning','机器学习','การเรียนรู้ของเครื่อง (แมชชีนเลิร์นนิง)'],['Training Data','训练数据','ข้อมูลฝึกสอน']],
    sentences:['I learn from examples.','The computer learns from many examples.','This is a new example.','Look at many pictures.']},
 
-  {n:7, title:'Rules or examples', zh:'规则还是例子', th:'กฎ หรือ ตัวอย่าง',
+  {n:7, week:1, tier:'easy', title:'Rules or examples', zh:'规则还是例子', th:'กฎ หรือ ตัวอย่าง',
    words:['rule','write','program','tell','old'],
    glue:[], chunks:['does not'],
    labels:[['Algorithm','算法','อัลกอริทึม']],
    sentences:['A person writes the rules.','The computer uses the rules.','AI does not use rules.','AI learns from many examples.']},
 
-  {n:8, title:'The next word', zh:'下一个单词', th:'คำถัดไป',
+  {n:8, week:1, tier:'easy', title:'The next word', zh:'下一个单词', th:'คำถัดไป',
    words:['guess','sentence','sure','sometimes','maybe'],
    glue:[], chunks:[],
    labels:[['Hallucination','人工智能幻觉','อาการหลอนของเอไอ (ข้อมูลที่เอไอสร้างขึ้นเองอย่างผิดๆ)']],
    sentences:['AI guesses the next word.','AI makes a sentence.','Sometimes the guess is wrong.','Maybe the next word is wrong.']},
 
-  {n:9, title:'I ask, or it works alone', zh:'我问，或者它自己工作', th:'ฉันถาม หรือมันทำงานเอง',
+  {n:9, week:1, tier:'easy', title:'I ask, or it works alone', zh:'我问，或者它自己工作', th:'ฉันถาม หรือมันทำงานเอง',
    words:['chatbot','photo','email','face','movie'],
    glue:['your'], chunks:['do not'],
    labels:[['On-Purpose AI','主动使用的人工智能','เอไอที่ใช้โดยตั้งใจ'],['Background AI','后台人工智能','เอไอที่ทำงานเบื้องหลัง']],
    sentences:['I ask the chatbot.','I choose this chatbot.','I do not ask this AI.','AI looks at your photos.','AI looks at your face.']},
+
+  /* ══ Week 3: Machine Learning & LLMs ══ */
+  {n:10, week:3, tier:'easy', title:'The machine learns from data', zh:'机器从数据中学习', th:'เครื่องเรียนรู้จากข้อมูล',
+   words:['machine','data','pattern','teach'],
+   glue:['for'], chunks:[],
+   sentences:['The machine learns from data.','I teach the machine.','Look for a pattern.','The computer learns many patterns.']},
+
+  {n:11, week:3, tier:'easy', title:'A dataset is many examples', zh:'数据集是很多例子', th:'ชุดข้อมูลคือตัวอย่างมากมาย',
+   words:['dataset','model'],
+   glue:[], chunks:[],
+   labels:[['Training Data','训练数据','ข้อมูลฝึกสอน']],
+   sentences:['A dataset is many examples.','The machine uses a dataset.','The model is new.','This model can guess.']},
+
+  {n:12, week:3, tier:'easy', title:'AI reads language', zh:'AI 阅读语言', th:'เอไออ่านภาษา',
+   words:['language','large','read'],
+   glue:[], chunks:[],
+   labels:[['Large Language Model (LLM)','大语言模型','โมเดลภาษาขนาดใหญ่ (แอลแอลเอ็ม)']],
+   sentences:['AI reads language.','This is a large dataset.','The AI learns a new language.','AI reads many languages.']},
+
+  {n:13, week:3, tier:'easy', title:'Small pieces called tokens', zh:'叫做词元的小片段', th:'ชิ้นส่วนเล็กๆ ที่เรียกว่าโทเคน',
+   words:['break','piece','small','token'],
+   glue:['into'], chunks:[],
+   labels:[['Prediction','预测','การทำนาย'],['Tokenization','分词','การแบ่งคำเป็นโทเคน']],
+   sentences:['AI breaks words into small pieces.','A token is a small piece.','AI guesses the next token.','This piece is small.']},
+
+  {n:14, week:3, tier:'easy', title:'Build new words from pieces', zh:'用小片段组成新单词', th:'สร้างคำใหม่จากชิ้นส่วนเล็กๆ',
+   words:['un','re','ing','ly','happy'],
+   glue:[], chunks:[],
+   note:{en:'AI does this too — it builds words from small pieces (tokens)!', zh:'AI 也是这样做的——它用小片段（词元）组成单词！', th:'เอไอก็ทำแบบนี้เหมือนกัน—มันสร้างคำจากชิ้นส่วนเล็กๆ (โทเคน)!', ex:['un + happy','re + use','look + ing']},
+   sentences:['un happy','re use','look ing','help ing','happy ly']},
+
+  /* ══ Intermediate tier — one per easy lesson, same topic, no new vocabulary at all.
+     Each one only recombines words already taught by that same point (via "and" and
+     question word order with "can") into longer, less-scaffolded sentences. Because
+     there is nothing new to introduce, they skip straight to step 4 (sentence-building)
+     — see startStep in startLevel(). Paired 1:1 with L1-L14 so the two tiers are the
+     same size, not a small bonus round bolted onto a big easy track. ══ */
+  {n:15, week:1, tier:'intermediate', startStep:4, title:'Words for this app', zh:'这个应用的词', th:'คำศัพท์สำหรับแอปนี้',
+   words:[], glue:[], chunks:[],
+   sentences:['Listen, and choose again.','Type it, and listen again.','Choose it, and it is right.','Type it again, and it is right.']},
+
+  {n:16, week:1, tier:'intermediate', startStep:4, title:'Things on a screen', zh:'屏幕上的东西', th:'สิ่งของบนหน้าจอ',
+   words:[], glue:[], chunks:[],
+   sentences:['This is a phone, and this is a computer.','Choose the picture, and type the word.','This is a screen, and it is right.','Type the name, and choose it again.']},
+
+  {n:17, week:1, tier:'intermediate', startStep:4, title:'Is / is not', zh:'是 / 不是', th:'ใช่ / ไม่ใช่',
+   words:[], glue:[], chunks:[],
+   sentences:['This is a robot, and it is not a phone.','It is the same, and it is not different.','Yes, this is a robot, and no, it is not a computer.','This is not the same, and it is different.']},
+
+  {n:18, week:1, tier:'intermediate', startStep:4, title:'People do things', zh:'人做事情', th:'คนทำสิ่งต่างๆ',
+   words:[], glue:[], chunks:[],
+   sentences:['I use a computer, and you use a phone.','I make a picture, and I help you.','You use a robot, and I use a computer.','I help you, and you help a person.']},
+
+  {n:19, week:1, tier:'intermediate', startStep:4, title:'AI is software', zh:'AI 是软件', th:'เอไอคือซอฟต์แวร์',
+   words:[], glue:[], chunks:[],
+   sentences:['AI is software, and it can work.','Can AI ask a person?','You can ask AI, and AI can help you.','This is new software, and AI can use it.']},
+
+  {n:20, week:1, tier:'intermediate', startStep:4, title:'Many examples', zh:'很多例子', th:'ตัวอย่างมากมาย',
+   words:[], glue:[], chunks:[],
+   sentences:['I learn from many examples, and I look at pictures.','Can you learn from a new example?','Look at this thing, and learn from it.','Look at the screen, and learn the new word.']},
+
+  {n:21, week:1, tier:'intermediate', startStep:4, title:'Rules or examples', zh:'规则还是例子', th:'กฎ หรือ ตัวอย่าง',
+   words:[], glue:[], chunks:[],
+   sentences:['A person writes the rules, and a computer uses the rules.','AI does not use old rules, and it can learn.','Can a person tell AI the rules?','Write the program, and tell a person.']},
+
+  {n:22, week:1, tier:'intermediate', startStep:4, title:'The next word', zh:'下一个单词', th:'คำถัดไป',
+   words:[], glue:[], chunks:[],
+   sentences:['AI guesses the next word, and it can help.','Sometimes the guess is right, and sometimes it is wrong.','Maybe AI is sure, and maybe it is not.','Can AI guess the sentence?']},
+
+  {n:23, week:1, tier:'intermediate', startStep:4, title:'I ask, or it works alone', zh:'我问，或者它自己工作', th:'ฉันถาม หรือมันทำงานเอง',
+   words:[], glue:[], chunks:[],
+   sentences:['I ask the chatbot, and it can guess.','AI looks at your photo, and it looks at your face.','I do not ask AI, and I do not use a chatbot.','Can you choose a new movie?']},
+
+  {n:24, week:3, tier:'intermediate', startStep:4, title:'The machine learns from data', zh:'机器从数据中学习', th:'เครื่องเรียนรู้จากข้อมูล',
+   words:[], glue:[], chunks:[],
+   sentences:['The machine learns from data, and it looks for a pattern.','I teach the machine, and it can learn.','Can a machine learn from data?','Look for a new pattern, and teach the computer.']},
+
+  {n:25, week:3, tier:'intermediate', startStep:4, title:'A dataset is many examples', zh:'数据集是很多例子', th:'ชุดข้อมูลคือตัวอย่างมากมาย',
+   words:[], glue:[], chunks:[],
+   sentences:['A dataset is many examples, and a model can guess.','The machine uses a dataset, and it makes a model.','Can a model guess the next word?','This model is new, and it can learn.']},
+
+  {n:26, week:3, tier:'intermediate', startStep:4, title:'AI reads language', zh:'AI 阅读语言', th:'เอไออ่านภาษา',
+   words:[], glue:[], chunks:[],
+   sentences:['AI reads language, and it can guess.','This is a large dataset, and AI can read it.','Can AI read a new language?','The machine reads language, and it learns patterns.']},
+
+  {n:27, week:3, tier:'intermediate', startStep:4, title:'Small pieces called tokens', zh:'叫做词元的小片段', th:'ชิ้นส่วนเล็กๆ ที่เรียกว่าโทเคน',
+   words:[], glue:[], chunks:[],
+   sentences:['AI breaks words into small pieces, and it makes a token.','A token is a small piece, and AI can guess it.','Can AI break this word into pieces?','This piece is small, and it is a new token.']},
+
+  {n:28, week:3, tier:'intermediate', startStep:4, title:'Build new words from pieces', zh:'用小片段组成新单词', th:'สร้างคำใหม่จากชิ้นส่วนเล็กๆ',
+   words:[], glue:[], chunks:[],
+   sentences:['un happy and re use','look ing and help ing','happy ly and un happy','re use and look ing']},
+
+  /* ══ Advanced tier — for students who found Intermediate too easy. One per easy/
+     intermediate lesson (same 1:1 pairing, same 14-lesson size). Still zero new
+     *vocabulary* — the only new material in the whole tier is two connector words,
+     "but" and "because", taught once in lesson 29 (the only advanced lesson that
+     doesn't skip straight to sentence-building, since it has something new to show).
+     Every lesson builds 3-clause sentences ("X, and Y, but Z.") instead of
+     Intermediate's 2-clause ones — genuinely harder to parse and to build. ══ */
+  {n:29, week:1, tier:'advanced', title:'Words for this app', zh:'这个应用的词', th:'คำศัพท์สำหรับแอปนี้',
+   words:[], glue:['but','because'], chunks:[],
+   note:{en:'Two new joining words: but (a surprise or opposite) and because (a reason).', zh:'两个新的连接词：but（转折/意外）和 because（原因）。', th:'คำเชื่อมใหม่สองคำ: but (สิ่งที่ตรงข้ามกัน) และ because (บอกเหตุผล)', ex:['Choose it, but it is wrong.','Type it again, because it is wrong.']},
+   sentences:['Choose it, but it is wrong.','Type it again, because it is wrong.','Listen, and choose again, because it is right.','It is right, but choose it again.']},
+
+  {n:30, week:1, tier:'advanced', startStep:4, title:'Things on a screen', zh:'屏幕上的东西', th:'สิ่งของบนหน้าจอ',
+   words:[], glue:[], chunks:[],
+   sentences:['This is a computer, but this is a phone.','Type the name, because this is the computer.','This is a screen, and it is a computer, but choose the picture.','Type the word, but choose the name.']},
+
+  {n:31, week:1, tier:'advanced', startStep:4, title:'Is / is not', zh:'是 / 不是', th:'ใช่ / ไม่ใช่',
+   words:[], glue:[], chunks:[],
+   sentences:['This is a robot, but it is not the same.','It is not different, because it is the same.','Yes, this is a robot, and it is not a phone, but it is different.','No, this is not the same, because it is a robot.']},
+
+  {n:32, week:1, tier:'advanced', startStep:4, title:'People do things', zh:'人做事情', th:'คนทำสิ่งต่างๆ',
+   words:[], glue:[], chunks:[],
+   sentences:['I make a picture, but you use a robot.','I use a computer, because I make a picture.','You help a person, and I help you, but it is not the same.','This is not a robot, because I use a computer.']},
+
+  {n:33, week:1, tier:'advanced', startStep:4, title:'AI is software', zh:'AI 是软件', th:'เอไอคือซอฟต์แวร์',
+   words:[], glue:[], chunks:[],
+   sentences:['AI is software, but it is not a robot.','You can ask AI, because it can work.','AI can work, and it can help you, but it is not a person.','This is new software, because AI can work.']},
+
+  {n:34, week:1, tier:'advanced', startStep:4, title:'Many examples', zh:'很多例子', th:'ตัวอย่างมากมาย',
+   words:[], glue:[], chunks:[],
+   sentences:['I learn from many examples, but this is a new thing.','Look at this thing, because it is a new example.','I learn from examples, and I look at pictures, but this is different.','This is many examples, but it is not the same thing.']},
+
+  {n:35, week:1, tier:'advanced', startStep:4, title:'Rules or examples', zh:'规则还是例子', th:'กฎ หรือ ตัวอย่าง',
+   words:[], glue:[], chunks:[],
+   sentences:['A person writes the rules, but AI does not write the rules.','AI does not use old rules, because it can learn.','Write the program, and tell a person, but it is not the same.','A person can tell AI the rules, because AI does not write the program.']},
+
+  {n:36, week:1, tier:'advanced', startStep:4, title:'The next word', zh:'下一个单词', th:'คำถัดไป',
+   words:[], glue:[], chunks:[],
+   sentences:['AI guesses the next word, but sometimes it is wrong.','Maybe the guess is right, because AI is sure.','Sometimes AI is sure, and sometimes it is not, but it can guess.','AI can guess the sentence, because it looks at many examples.']},
+
+  {n:37, week:1, tier:'advanced', startStep:4, title:'I ask, or it works alone', zh:'我问，或者它自己工作', th:'ฉันถาม หรือมันทำงานเอง',
+   words:[], glue:[], chunks:[],
+   sentences:['I ask the chatbot, but it does not guess right.','I do not ask AI, because I use a chatbot.','AI looks at your photo, and it looks at your face, but it is not a person.','I do not use a chatbot, because I do not ask AI.']},
+
+  {n:38, week:3, tier:'advanced', startStep:4, title:'The machine learns from data', zh:'机器从数据中学习', th:'เครื่องเรียนรู้จากข้อมูล',
+   words:[], glue:[], chunks:[],
+   sentences:['The machine learns from data, but it does not look for a pattern.','I teach the machine, because it can learn from data.','The machine looks for a pattern, and it learns, but sometimes it is wrong.','Teach the computer, but do not use old data.']},
+
+  {n:39, week:3, tier:'advanced', startStep:4, title:'A dataset is many examples', zh:'数据集是很多例子', th:'ชุดข้อมูลคือตัวอย่างมากมาย',
+   words:[], glue:[], chunks:[],
+   sentences:['A dataset is many examples, but a model is new.','The machine uses a dataset, because it can make a model.','A model can guess, and it can learn, but it is not a person.','This model is new, but it does not use old data.']},
+
+  {n:40, week:3, tier:'advanced', startStep:4, title:'AI reads language', zh:'AI 阅读语言', th:'เอไออ่านภาษา',
+   words:[], glue:[], chunks:[],
+   sentences:['AI reads language, but it does not write a sentence.','This is a large dataset, because AI can read many examples.','AI reads language, and it can guess, but it is not sure.','The machine reads language, but it does not use old rules.']},
+
+  {n:41, week:3, tier:'advanced', startStep:4, title:'Small pieces called tokens', zh:'叫做词元的小片段', th:'ชิ้นส่วนเล็กๆ ที่เรียกว่าโทเคน',
+   words:[], glue:[], chunks:[],
+   sentences:['AI breaks words into small pieces, but a token is small.','A token is a small piece, because AI reads language.','AI guesses the next token, and it breaks the word, but sometimes it is wrong.','This piece is small, but it is not the same token.']},
+
+  {n:42, week:3, tier:'advanced', startStep:4, title:'Build new words from pieces', zh:'用小片段组成新单词', th:'สร้างคำใหม่จากชิ้นส่วนเล็กๆ',
+   words:[], glue:[], chunks:[],
+   sentences:['un happy and re use, but look ing','help ing and happy ly, but re use','look ing, and help ing, but un happy','re use, and un happy, but happy ly']},
 ];
 /* ==== DATA END ==== */
 
@@ -608,6 +812,10 @@ const DEMOS = {
   guess:()=>`<div class="d"><span class="d-col"><span class="d-bar">40<i style="width:34px"></i></span><span class="d-bar">30<i style="width:25px"></i></span><span class="d-bar">15<i style="width:13px"></i></span></span></div>`,
   sentence:()=>`<div class="d"><span class="d-t">AI</span><span class="d-t">is</span><span class="d-t">new</span></div>`,
   sometimes:()=>`<div class="d"><span class="d-dot f"></span><span class="d-dot"></span><span class="d-dot f"></span><span class="d-dot"></span><span class="d-dot"></span></div>`,
+  pattern:()=>`<div class="d" style="display:flex;gap:5px;align-items:center">
+    <span class="d-sq" style="width:15px;height:15px"></span><span class="d-ci" style="width:15px;height:15px"></span>
+    <span class="d-sq" style="width:15px;height:15px"></span><span class="d-ci" style="width:15px;height:15px"></span></div>`,
+  break:()=>`<div class="d"><span class="d-t">brea</span><span class="d-op">/</span><span class="d-t">k</span></div>`,
 };
 function picHTML(w){
   const d=W[w]; if(!d) return `<span class="pic-word">${w}</span>`;
@@ -623,6 +831,24 @@ const store={
   set(k,v){try{localStorage.setItem('wl_'+k,JSON.stringify(v));}catch(e){}}
 };
 
+/* ---------------- weeks (a per-device display filter — progress itself is one flat sequence, see LEVELS[].week) ---------------- */
+const WEEKS = [
+  {id:1, label:'Week 1', zh:'第一周·英语基础', th:'สัปดาห์ที่ 1 · พื้นฐานภาษาอังกฤษ'},
+  {id:3, label:'Week 3', zh:'第三周·机器学习', th:'สัปดาห์ที่ 3 · การเรียนรู้ของเครื่อง'},
+];
+let currentWeek = store.get('curWeek', null);
+function weekOf(n){ const l=LEVELS.find(x=>x.n===n); return l?l.week:1; }
+
+/* ---------------- difficulty tier (Easy = the original beginner curriculum,
+   Intermediate = harder, less-scaffolded lessons for stronger students) ---------------- */
+const TIERS = [
+  {id:'easy', label:'Easy', zh:'简单', th:'ง่าย'},
+  {id:'intermediate', label:'Intermediate', zh:'中级', th:'ระดับกลาง'},
+  {id:'advanced', label:'Advanced', zh:'高级', th:'ระดับสูง'},
+];
+let currentTier = store.get('tier', null);
+function tierOf(n){ const l=LEVELS.find(x=>x.n===n); return l?(l.tier||'easy'):'easy'; }
+
 /* ---------------- bilingual toggle: Chinese ⇄ Thai (a per-device preference, not student data) ---------------- */
 let LANG = store.get('lang','zh');
 function pick(zh,th){ return LANG==='th' ? (th||zh) : zh; }
@@ -630,7 +856,8 @@ function gl(o){ return o ? pick(o.zh, o.th) : ''; }
 function barTagline(){ return 'English first · '+pick('英语优先','ภาษาอังกฤษก่อน'); }
 function renderLangToggle(){
   const btn = $('#langtoggle');
-  btn.textContent = LANG==='th' ? '🇹🇭 ไทย' : '🇨🇳 中文';
+  /* Shows the language you'll SWITCH TO, not the one currently active. */
+  btn.textContent = LANG==='th' ? '🇨🇳 中文' : '🇹🇭 ไทย';
   btn.title = LANG==='th' ? 'Switch to Chinese' : 'Switch to Thai';
 }
 $('#langtoggle').addEventListener('click',()=>{
@@ -649,6 +876,11 @@ function blankProfile(name, email){
   return {name, email, done:[], stats:{}, sents:[], first:{r:0,t:0}, points:0, seenWords:{}};
 }
 let uid=null, userEmail=null, isTeacher=false;
+/* Guest mode: no Google account, no Firestore — progress lives only on this device.
+   This is the "optional login" path for devices/networks where Google Sign-In doesn't
+   work at all (e.g. Huawei tablets without Google Play Services). */
+let isGuest=false;
+const canPlay = ()=> !!uid || isGuest;
 let P = blankProfile('','');
 let saveTimer=null, dirty=false;
 function save(){
@@ -658,9 +890,18 @@ function save(){
 }
 function flushSave(){
   clearTimeout(saveTimer);
-  if(!dirty || !uid) return;
+  if(!dirty) return;
   dirty=false;
+  if(isGuest){ store.set('guestProfile', P); return; }
+  if(!uid) return;
   window.WordLabFB.saveStudent(uid, P).catch(e=>console.error('save failed', e));
+}
+function startGuest(){
+  isGuest=true; uid=null; userEmail=null; isTeacher=false; authError=null; authLoading=false;
+  P = store.get('guestProfile', null) || blankProfile('Guest','');
+  if(!P.stats) P.stats={}; if(typeof P.points!=='number') P.points=0; if(!P.seenWords) P.seenWords={};
+  if(!P.done) P.done=[]; if(!P.sents) P.sents=[]; if(!P.first) P.first={r:0,t:0};
+  renderHome(); show('home'); setBar('Word Lab', barTagline());
 }
 window.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') flushSave(); });
 window.addEventListener('beforeunload', flushSave);
@@ -692,8 +933,15 @@ function addPoints(n, why){
   P.points=(P.points||0)+n; save();
   const after = rankFor(P.points).lv;
   updatePtsBadge();
+  bumpPtsBadge();
   if(after>before) showLevelUp(rankFor(P.points));
   else showPointsToast(n);
+}
+function bumpPtsBadge(){
+  const el=$('#ptsbadge'); if(!el) return;
+  el.classList.remove('bump'); void el.offsetWidth; /* restart the animation even on rapid repeat gains */
+  el.classList.add('bump');
+  setTimeout(()=>el.classList.remove('bump'), 220);
 }
 function showLevelUp(rk){
   const el=$('#ptoast');
@@ -715,26 +963,83 @@ function showPointsToast(n){
 
 /* ---------------- speech ---------------- */
 let voices=[], best=null, playBtn=null;
+/* Apple's built-in "Novelty" voices (Settings → Accessibility → Spoken Content → Voices →
+   English → Novelty) — cartoonish/joke voices with no place in a language-learning app. */
+const NOVELTY=['Albert','Bad News','Bahh','Bells','Boing','Bubbles','Cellos','Deranged',
+  'Good News','Hysterical','Jester','Junior','Kathy','Organ','Pipe Organ','Superstar',
+  'Trinoids','Whisper','Wobble','Zarvox','Fred','Ralph'];
+function isNovelty(v){ return NOVELTY.some(n=>v.name===n || v.name.startsWith(n+' ')); }
 const NATURAL=['Premium','Enhanced','Natural','Online','Neural','Siri','Ava','Samantha','Zoe','Google US English'];
-function pickVoice(list){
-  for(const h of NATURAL){const m=list.find(v=>v.name.includes(h)); if(m) return m;}
-  return list.find(v=>!/compact/i.test(v.name)) || list[0] || null;
+/* iOS quirk: a downloaded Enhanced/Premium voice usually keeps the SAME display `name`
+   as the default compact one already on the device (e.g. two voices both named "Samantha").
+   The quality only shows up in `voiceURI` (…voice.compact… / …voice.enhanced… / …voice.premium…),
+   never in `name` — so matching on `name` alone can never find the better voice on iOS.
+   Key everything by voiceURI (unique per quality tier) and check both fields for hints. */
+function qualityOf(v){
+  const u=(v.voiceURI||'').toLowerCase();
+  if(u.includes('premium')||/premium/i.test(v.name)) return 'Premium';
+  if(u.includes('enhanced')||/enhanced/i.test(v.name)) return 'Enhanced';
+  if(u.includes('compact')) return 'Standard';
+  return '';
 }
+const ACCENTS={
+  'en-us':'🇺🇸 US','en-gb':'🇬🇧 UK','en-au':'🇦🇺 Australia','en-in':'🇮🇳 India',
+  'en-ie':'🇮🇪 Ireland','en-za':'🇿🇦 South Africa','en-ca':'🇨🇦 Canada','en-nz':'🇳🇿 New Zealand',
+  'en-sg':'🇸🇬 Singapore','en-ph':'🇵🇭 Philippines','en-hk':'🇭🇰 Hong Kong',
+};
+function accentOf(v){
+  const tag=(v.lang||'').toLowerCase();
+  return ACCENTS[tag] || (v.lang||'');
+}
+function pickVoice(list){
+  for(const h of NATURAL){
+    const m=list.find(v=>v.name.includes(h) || (v.voiceURI&&v.voiceURI.toLowerCase().includes(h.toLowerCase())));
+    if(m) return m;
+  }
+  return list.find(v=>qualityOf(v)!=='Standard') || list[0] || null;
+}
+let rawVoices=[]; /* every voice iOS/the browser reports, before any filtering — for on-page diagnostics */
 function loadVoices(){
   if(!('speechSynthesis' in window)) return;
   const all=speechSynthesis.getVoices(); if(!all.length) return;
-  const en=all.filter(v=>v.lang&&v.lang.toLowerCase().startsWith('en'));
-  voices = en.length?en:all;
-  const saved=store.get('voice',null);
-  best=(saved&&voices.find(v=>v.name===saved))||pickVoice(voices);
+  rawVoices=all;
+  const en=all.filter(v=>v.lang&&v.lang.toLowerCase().startsWith('en')).filter(v=>!isNovelty(v));
+  voices = en.length?en:all.filter(v=>!isNovelty(v));
+  const saved=store.get('voiceURI',null);
+  best=(saved&&voices.find(v=>v.voiceURI===saved))||pickVoice(voices);
   const sel=$('#vsel');
   if(sel){
     sel.innerHTML='';
-    voices.forEach(v=>{const o=document.createElement('option');o.value=v.name;o.textContent=v.name;sel.appendChild(o);});
-    if(best) sel.value=best.name;
+    voices.forEach(v=>{
+      const o=document.createElement('option'); o.value=v.voiceURI;
+      const q=qualityOf(v), acc=accentOf(v);
+      o.textContent=v.name+(acc?' · '+acc:'')+(q?' — '+q:'');
+      sel.appendChild(o);
+    });
+    if(best) sel.value=best.voiceURI;
   }
+  const dbg=$('#vdebug');
+  if(dbg && !dbg.hidden) dbg.textContent = rawDebugText();
 }
-if('speechSynthesis' in window){ loadVoices(); speechSynthesis.onvoiceschanged=loadVoices; }
+function rawDebugText(){
+  if(!rawVoices.length) return 'No voices reported yet.';
+  return rawVoices.map(v=>`${v.name} | ${v.lang} (${accentOf(v)}) | ${qualityOf(v)||'?'} | local:${v.localService} | ${v.voiceURI}`).join('\n');
+}
+if('speechSynthesis' in window){
+  loadVoices();
+  speechSynthesis.onvoiceschanged=loadVoices;
+  /* iOS quirk: speechSynthesis sometimes stays "asleep" and under-reports voices
+     (including downloaded Enhanced/Premium ones) until the engine has actually
+     spoken once. A near-silent warm-up utterance, plus a couple of delayed
+     re-checks, wakes it up without the student noticing. */
+  try{
+    const warm=new SpeechSynthesisUtterance(' ');
+    warm.volume=0.01; warm.rate=10;
+    warm.onend=warm.onerror=()=>loadVoices();
+    speechSynthesis.speak(warm);
+  }catch(e){}
+  setTimeout(loadVoices,800); setTimeout(loadVoices,2000); setTimeout(loadVoices,4000);
+}
 function stopAudio(){
   if('speechSynthesis' in window) speechSynthesis.cancel();
   $('#stopaudio').classList.remove('on');
@@ -775,11 +1080,11 @@ function show(v){
   $('#back').hidden = (v==='home' || v==='teacher');
   $('#rail').hidden = (v!=='task');
   $('#repeat').hidden = (v!=='task');
-  $('#ptsbadge').hidden = !uid;
+  $('#ptsbadge').hidden = !canPlay();
   updatePtsBadge();
   window.scrollTo(0,0);
 }
-function updatePtsBadge(){ if(uid) $('#ptsbadge').textContent = 'Lv'+rankFor(P.points||0).lv+' · ★'+(P.points||0); }
+function updatePtsBadge(){ if(canPlay()) $('#ptsbadge').textContent = 'Lv'+rankFor(P.points||0).lv+' · ★'+(P.points||0); }
 $('#back').addEventListener('click',()=>{ stopAudio(); renderHome(); show('home'); setBar('Word Lab',barTagline()); });
 $('#ptsbadge').addEventListener('click',()=>{ renderHome(); show('home'); setBar('Word Lab',barTagline()); });
 function setBar(a,b){ $('#barlv').textContent=a; $('#barname').textContent=b; }
@@ -825,7 +1130,7 @@ window.onWordLabAuth = async function(authState){
     renderHome(); show('home'); setBar('Word Lab','Sign in to learn');
     return;
   }
-  uid=authState.uid; userEmail=authState.email;
+  uid=authState.uid; userEmail=authState.email; isGuest=false;
   /* The teacher gets the full student experience too (own progress doc), plus a link
      to the report. Their own row is filtered out of the dashboard's student list. */
   isTeacher = (userEmail.toLowerCase()===TEACHER_EMAIL);
@@ -851,8 +1156,7 @@ window.onWordLabAuth = async function(authState){
 const GOOGLE_G = `<svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>`;
 
 function identityBlockHTML(){
-  const signedIn = !!uid;
-  if(signedIn){
+  if(canPlay()){
     const rk = rankFor(P.points||0), nx = nextRank(P.points||0);
     const span = nx ? (nx.min-rk.min) : 1;
     const into = nx ? Math.min(100, Math.round(100*((P.points||0)-rk.min)/span)) : 100;
@@ -863,10 +1167,11 @@ function identityBlockHTML(){
           <div class="score-pts"><span class="star">★</span>${P.points||0}<span class="pts-cap">points</span></div>
           <div class="score-rank">${rk.en} <span class="score-rank-gl">${gl(rk)}</span></div>
         </div>
-        <button class="linkish" id="switchp" style="padding:0;font-size:12px;align-self:flex-start">Sign out</button>
+        <button class="linkish" id="switchp" style="padding:0;font-size:12px;align-self:flex-start">${isGuest?'Sign in':'Sign out'}</button>
       </div>
       <div class="ptsbar"><i style="width:${into}%"></i></div>
       <div style="font-size:11.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace">${nx ? (nx.min-(P.points||0))+' points → Lv '+nx.lv+' '+nx.en : '🏆 Top level reached'}</div>
+      ${isGuest?`<div style="font-size:11.5px;color:var(--gloss);font-weight:600;margin-top:.7rem">👤 Playing as guest — progress saved on this device only. ${pick('以访客身份游玩——进度只保存在这台设备上。','เล่นแบบผู้เยี่ยมชม—ความคืบหน้าจะบันทึกไว้บนอุปกรณ์นี้เท่านั้น')}</div>`:''}
       ${isTeacher?`<button class="key btn ghost" id="toteacher" style="width:100%;margin-top:.9rem">📋 Teacher report →</button>`:''}`;
   }
   if(!authChecked){
@@ -883,13 +1188,19 @@ function identityBlockHTML(){
     : '';
   return `${errHTML}
     <button class="key gsignin" id="gsignin">${GOOGLE_G} Sign in with Google</button>
-    <div style="font-size:11.5px;color:var(--ink3);margin-top:.6rem">🔒 @sisbschool.com school accounts only · ${pick('只能用学校 Google 账号登录','เข้าสู่ระบบด้วยบัญชี Google ของโรงเรียนเท่านั้น')}</div>`;
+    <div style="font-size:11.5px;color:var(--ink3);margin-top:.6rem">🔒 @sisbschool.com school accounts only · ${pick('只能用学校 Google 账号登录','เข้าสู่ระบบด้วยบัญชี Google ของโรงเรียนเท่านั้น')}</div>
+    <button class="linkish" id="playguest" style="padding:0;font-size:12.5px;margin-top:.9rem">▶ Play without signing in</button>
+    <div style="font-size:11px;color:var(--ink3);margin-top:.25rem">${pick('进度只保存在这台设备上，不会同步。','ความคืบหน้าจะบันทึกไว้บนอุปกรณ์นี้เท่านั้น จะไม่ซิงค์ข้ามอุปกรณ์')}</div>`;
 }
 
 function renderHome(){
-  const signedIn = !!uid;
+  const signedIn = canPlay();
   const nextN = signedIn ? (LEVELS.find(l=>!P.done.includes(l.n))?.n || LEVELS.length) : 0;
   const learned = signedIn ? Object.keys(P.stats).filter(w=>P.stats[w].ok>0).length : 0;
+  const activeWeek = currentWeek!==null ? currentWeek : weekOf(nextN||1);
+  const activeTier = currentTier!==null ? currentTier : tierOf(nextN||1);
+  const weekLevels = LEVELS.filter(l=>l.week===activeWeek && (l.tier||'easy')===activeTier);
+  const doneInWeek = weekLevels.filter(l=>P.done.includes(l.n)).length;
   $('#v-home').innerHTML = `
     <div class="hero">
       <div class="eyebrow">Grade 8 · AI Unit</div>
@@ -903,31 +1214,65 @@ function renderHome(){
     <div class="voice">
       <span>🔊</span><select id="vsel"></select>
       <button class="linkish" id="vtest" style="padding:0">Test</button>
-      <span style="flex-basis:100%;font-size:12px;color:var(--ink3)">iPad: Settings → Accessibility → Spoken Content → Voices → download an <b>Enhanced</b> English voice.</span>
+      <button class="linkish" id="vrefresh" style="padding:0">🔄 Refresh</button>
+      <button class="linkish" id="vdebugbtn" style="padding:0">Show voice info</button>
+      <span style="flex-basis:100%;font-size:12px;color:var(--ink3)">iPad: Settings → Accessibility → Spoken Content → Voices → download an <b>Enhanced</b> or <b>Premium</b> English voice. Downloaded but not showing up? Tap Refresh — if it still isn't there, fully close Safari (swipe it away in the app switcher) and reopen this page. Still stuck on Standard? Tap "Show voice info" and send that text to your teacher.</span>
+      <pre id="vdebug" hidden style="flex-basis:100%;font-size:10.5px;font-family:'JetBrains Mono',monospace;
+        white-space:pre-wrap;background:var(--sunk);border:1px solid var(--edge);border-radius:8px;
+        padding:.6rem;margin-top:.4rem;max-height:160px;overflow:auto"></pre>
+    </div>
+    <div class="weektabs">
+      ${WEEKS.map(w=>`<button class="key weektab ${w.id===activeWeek?'on':''}" data-week="${w.id}">
+        <b>${w.label}</b><span>${pick(w.zh,w.th)}</span></button>`).join('')}
+    </div>
+    <div class="weektabs tiertabs">
+      ${TIERS.map(t=>`<button class="key weektab tiertab ${t.id===activeTier?'on':''}" data-tier="${t.id}">
+        <b>${t.label}</b><span>${pick(t.zh,t.th)}</span></button>`).join('')}
     </div>
     <div class="ladder">
-      ${LEVELS.map(l=>{
-        const done=signedIn && P.done.includes(l.n), now=signedIn && (l.n===nextN), open=done||now;
-        return `<button class="key lv ${done?'done':''} ${now?'now':''}" data-lv="${l.n}" ${open?'':'disabled'}>
+      ${weekLevels.map(l=>{
+        const done=signedIn && P.done.includes(l.n), now=signedIn && (l.n===nextN);
+        const preview = l.words.length ? l.words.slice(0,4).join(' · ')+'…' : (l.sentences[0]||'');
+        return `<button class="key lv ${done?'done':''} ${now?'now':''}" data-lv="${l.n}" ${signedIn?'':'disabled'}>
           <span class="lv-n">${done?'✓':l.n}</span>
-          <span class="lv-t"><b>${l.title}</b><span>${l.words.slice(0,4).join(' · ')}…</span></span>
-          <span class="lv-s">${done?'done':(now?'start':'🔒')}</span>
+          <span class="lv-t"><b>${l.title}</b><span>${preview}</span></span>
+          <span class="lv-s">${done?'done':(now?'start':'→')}</span>
         </button>`;
       }).join('')}
     </div>
     ${signedIn?`<div style="display:flex;align-items:center;gap:1rem">
       <span class="muted" style="font-family:'JetBrains Mono',monospace;font-size:12px">
-        ${P.done.length}/${LEVELS.length} lessons · ${learned} words</span>
+        ${doneInWeek}/${weekLevels.length} lessons this week · ${P.done.length}/${LEVELS.length} total · ${learned} words</span>
     </div>`:''}`;
+  document.querySelectorAll('.weektab:not(.tiertab)').forEach(b=>b.addEventListener('click',()=>{
+    currentWeek = Number(b.dataset.week); store.set('curWeek', currentWeek);
+    renderHome();
+  }));
+  document.querySelectorAll('.tiertab').forEach(b=>b.addEventListener('click',()=>{
+    currentTier = b.dataset.tier; store.set('tier', currentTier);
+    renderHome();
+  }));
   loadVoices();
-  $('#vsel').onchange=e=>{ best=voices.find(v=>v.name===e.target.value)||best; store.set('voice',e.target.value); say('Hello. This is the new voice.'); };
+  $('#vsel').onchange=e=>{ best=voices.find(v=>v.voiceURI===e.target.value)||best; store.set('voiceURI',e.target.value); say('Hello. This is the new voice.'); };
   $('#vtest').onclick=()=>say('Listen and choose.');
+  $('#vrefresh').onclick=()=>{ loadVoices(); say('Listen and choose.'); };
+  $('#vdebugbtn').onclick=()=>{
+    const dbg=$('#vdebug');
+    dbg.hidden=!dbg.hidden;
+    $('#vdebugbtn').textContent = dbg.hidden ? 'Show voice info' : 'Hide voice info';
+    if(!dbg.hidden) dbg.textContent = rawDebugText();
+  };
   $('#gsignin')?.addEventListener('click',()=>{
     if(!window.WordLabFB){ showFbError('connect to Google',
       'The Firebase code did not load. This is usually the school network or a browser extension blocking gstatic.com.'); return; }
     window.WordLabFB.signIn();
   });
-  $('#switchp')?.addEventListener('click',()=>{ flushSave(); window.WordLabFB.signOut(); });
+  $('#switchp')?.addEventListener('click',()=>{
+    flushSave();
+    if(isGuest){ isGuest=false; renderHome(); return; }
+    window.WordLabFB.signOut();
+  });
+  $('#playguest')?.addEventListener('click', startGuest);
   $('#toteacher')?.addEventListener('click',()=>{ show('teacher'); setBar('Report','For the teacher'); renderTeacher(); });
   $('#v-home').querySelectorAll('[data-lv]').forEach(b=>b.onclick=()=>startLevel(+b.dataset.lv));
 }
@@ -946,7 +1291,7 @@ const STEP_ASK = [
 
 function startLevel(n){
   const L=LEVELS[n-1];
-  S={L, step:0, queue:[], i:0, streak:0, tries:0, guided:false};
+  S={L, step:(L.startStep||0), queue:[], i:0, streak:0, tries:0, guided:false};
   buildStep();
   show('task');
 }
@@ -974,6 +1319,10 @@ function buildStep(){
     const pick=shuffle(prev.length?prev:own).slice(0,3);
     S.queue=pick.map((w,idx)=> idx===2 ? {kind:'spell',w} : {kind:'readPic',w,opts:pickOpts(w,3)});
   }
+  /* A lesson that teaches a connector word (not a pictured vocabulary word) has an
+     empty L.words — steps 1-3 would have nothing to drill. Skip straight through
+     rather than rendering an empty item queue. */
+  if(S.step>=1 && S.step<=3 && S.queue.length===0){ finishStep(); return; }
   setRail(); renderItem();
 }
 
@@ -1112,8 +1461,19 @@ function rPic(it){
     `<div class="pics ${opts.length===2?'two':''}" id="pics">
       ${opts.map(o=>`<button class="key pic" data-o="${o}">${picHTML(o)}</button>`).join('')}
     </div>
+    <div style="text-align:center;margin-top:.7rem"><button class="linkish" id="hintbtn" style="padding:0">💡 ${pick('提示','คำใบ้')}</button></div>
     <div class="fb" id="fb"></div>`;
   if(listen){ $('#spk').onclick=()=>say(it.w); setTimeout(()=>say(it.w),250); }
+  /* One-shot reveal: highlight the answer once, but don't flip S.guided — that flag
+     is the persistent "2 wrong tries" assist mode, which would keep re-highlighting
+     every next item automatically. A hint should show once and wait to be pressed again. */
+  $('#hintbtn').onclick=()=>{
+    const el=$('#pics').querySelector(`[data-o="${it.w}"]`);
+    el?.classList.add('is-target');
+    /* Flash, don't stay lit — auto-clear unless the separate 2-wrong-tries assist
+       mode has since taken over (that one is meant to stay on until solved). */
+    setTimeout(()=>{ if(!S.guided) el?.classList.remove('is-target'); }, 2500);
+  };
   $('#pics').querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{
     if(S.guided){
       if(b.dataset.o===it.w){ b.classList.add('is-yes'); guidedAdvance(600); }
@@ -1141,7 +1501,10 @@ function rSpell(it){
     <div class="tiles" id="tiles">
       ${shuffle(letters.map((c,k)=>({c,k}))).map(o=>`<button class="key tile" data-c="${o.c}" data-id="${o.k}">${o.c}</button>`).join('')}
     </div>
-    <div class="act"><button class="key btn ghost" id="undo" style="flex:1">← Undo</button></div>
+    <div class="act">
+      <button class="key btn ghost" id="undo" style="flex:1">← Undo</button>
+      <button class="key btn ghost" id="hintbtn" style="flex:1">💡 ${pick('提示','คำใบ้')}</button>
+    </div>
     <div class="fb" id="fb"></div>`;
   $('#spk').onclick=()=>say(it.w);
   setTimeout(()=>say(it.w),250);
@@ -1158,16 +1521,29 @@ function rSpell(it){
       const built=[...slots.querySelectorAll('.slot')].map(s=>s.textContent).join('');
       const ok = built.toLowerCase()===it.w.toLowerCase();
       if(S.guided && ok){ guidedAdvance(600); return; }
+      /* On the first wrong try, leave the letters exactly as placed (don't auto-clear) —
+         the student can see what they wrote and fix it themselves with Undo. Only the
+         2nd-wrong "guided" path resets, since that's a deliberate walk-through-from-
+         scratch with hints, not the everyday one-mistake case. */
       judge(ok, it.w, ()=>{ reset(); hint(); });
-      if(!ok && !S.guided) setTimeout(reset,700);
     }
   }
   function reset(){ used.forEach(([b,s])=>{ b.classList.remove('used'); s.textContent=''; s.classList.remove('full'); }); used.length=0; pos=0; }
   function hint(){
-    const want=letters[0];
+    $('#tiles').querySelectorAll('.tile').forEach(x=>x.classList.remove('is-target'));
+    const want=letters[pos];
     const t=[...$('#tiles').querySelectorAll('.tile')].find(x=>!x.classList.contains('used')&&x.dataset.c===want);
     if(t) t.classList.add('is-target');
+    return t;
   }
+  $('#hintbtn').onclick=()=>{
+    const t=hint();
+    /* Flash, don't stay lit — auto-clear unless the separate 2-wrong-tries assist
+       mode has since taken over (that one is meant to stay on until solved).
+       Clear the SPECIFIC element captured now, not a fresh #tiles query later —
+       by the time the timer fires the student may already be on a different item. */
+    setTimeout(()=>{ if(!S.guided) t?.classList.remove('is-target'); }, 2500);
+  };
   $('#tiles').querySelectorAll('.tile').forEach(b=>b.onclick=()=>{
     place(b);
     if(S.guided){
@@ -1193,6 +1569,7 @@ function rChips(it){
     <div class="bank" id="bank">${bank.map((c,k)=>`<button class="key chip" data-c="${c}" data-id="${k}">${c}</button>`).join('')}</div>
     <div class="act">
       <button class="key btn ghost" id="undo" style="flex:1">← Undo</button>
+      <button class="key btn ghost" id="hintbtn" style="flex:1">💡 ${pick('提示','คำใบ้')}</button>
       <button class="key btn go" id="chk">Check ✓</button>
     </div>
     <div class="fb" id="fb"></div>`;
@@ -1214,16 +1591,27 @@ function rChips(it){
     const w=(want[picked.length]||'').toLowerCase();
     const t=[...$('#bank').querySelectorAll('.chip')].find(x=>!x.classList.contains('used')&&x.dataset.c.toLowerCase()===w);
     if(t) t.classList.add('is-target');
+    return t;
   }
+  $('#hintbtn').onclick=()=>{
+    const t=markNext();
+    /* Flash, don't stay lit — auto-clear unless the separate 2-wrong-tries assist
+       mode has since taken over (that one is meant to stay on until solved).
+       Clear the SPECIFIC element captured now, not a fresh #bank query later —
+       by the time the timer fires the student may already be on a different item. */
+    setTimeout(()=>{ if(!S.guided) t?.classList.remove('is-target'); }, 2500);
+  };
   $('#undo').onclick=()=>{ const l=picked.pop(); if(l){ l.el.classList.remove('used'); draw(); if(S.guided) markNext(); } };
   $('#chk').onclick=()=>{
     const got=picked.map(p=>p.c).join(' ');
     const ok=norm(got)===norm(want.join(' '));
     if(S.guided){ if(ok) guidedAdvance(500); return; }
+    /* First wrong try: leave the built sentence exactly as placed (don't auto-clear) —
+       the student can see what they built and fix it themselves with Undo. Only the
+       2nd-wrong "guided" path (onGuide below) resets, as a deliberate fresh start. */
     judge(ok, it.s, ()=>{
       picked.splice(0).forEach(p=>p.el.classList.remove('used')); draw(); markNext();
     });
-    if(!ok && !S.guided) setTimeout(()=>{ picked.splice(0).forEach(p=>p.el.classList.remove('used')); draw(); },700);
   };
 }
 
